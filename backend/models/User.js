@@ -50,6 +50,13 @@ const userSchema = new mongoose.Schema({
         trim: true
     },
 
+    // for role-based authorization
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    }
+
     // will implemet in later stage
     
     // solvedProblems: [{
@@ -70,4 +77,4 @@ const userSchema = new mongoose.Schema({
 
 });
 
-module.exports = mongoose.model('User', userSchema)
+module.exports = mongoose.model('User', userSchema);
