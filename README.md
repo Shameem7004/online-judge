@@ -5,7 +5,7 @@ A full‑stack web application for coding problem management, submissions, and u
 ---
 
 ## 📂 Project Structure
-
+```bash
 Online-Judge/
 ├── backend/
 │ ├── controllers/ # API logic (problems, users, submissions, etc.)
@@ -25,7 +25,7 @@ Online-Judge/
 │ └── README.md # Frontend-specific info
 ├── .gitignore # Git ignore rules
 └── README.md # Project documentation
-
+```
 
 ---
 
