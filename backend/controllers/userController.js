@@ -189,7 +189,7 @@ const logoutUser = (req, res) => {
 // to get info of logged in user.
 const getCurrentUser = async (req, res) => {
     try{
-        if(!req.user){
+        if(!req.cookies.token){
             return res.status(401).json({
                 success: false,
                 message: 'Unauthorized'

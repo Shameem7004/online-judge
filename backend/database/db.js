@@ -47,7 +47,3 @@ const DBConnection = async () => {
 
 // Export the connection function for use in other modules
 module.exports = { DBConnection };
-
-// if (require.main === module) {
-//   DBConnection();
-// }

@@ -13,8 +13,8 @@ router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 
 // get current user
-// router.get('/profile', auth, getCurrentUser);
-router.get('/profile', getCurrentUser);
+router.get('/profile', auth, getCurrentUser);
+// router.get('/profile', getCurrentUser);
 
 
 

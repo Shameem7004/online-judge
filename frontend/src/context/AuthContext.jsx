@@ -12,6 +12,7 @@ export const AuthProvider = ({ children }) => {
             try {
                 const res = await getCurrentUser(); 
                 setUser(res.data);
+                console.log("User fetched successfully:", res.data);
             } catch (error) {
                 setUser(null);
             } finally {

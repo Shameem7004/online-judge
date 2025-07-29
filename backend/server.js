@@ -6,6 +6,8 @@ const dotenv = require("dotenv");
 const { DBConnection } = require("./database/db.js");
 const userRoutes = require("./routes/userRoutes.js");
 const problemRoutes = require('./routes/problemRoutes');
+const submissionRoutes = require('./routes/submissionRoutes.js');
+const testCaseRoutes = require('./routes/testCaseRoutes.js');
 
 // Load environment variable
 dotenv.config();
@@ -31,7 +33,10 @@ app.use(cookieParser());
 app.use('/api/users', userRoutes);
 // problems route
 app.use('/api/problems', problemRoutes);
-
+// submission route
+app.use('/api/submissions', submissionRoutes);
+// testCase route
+app.use('/api/testcases', testCaseRoutes);
 
 
 // test route

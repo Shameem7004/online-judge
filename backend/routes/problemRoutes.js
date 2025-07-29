@@ -1,4 +1,3 @@
-// backend/routes/problemRoutes.js
 const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/auth'); 
@@ -9,7 +8,6 @@ const {
 } = require('../controllers/problemController');
 
 // Create a problem 
-// router.post('/', auth, createProblem);
 router.post('/', auth, createProblem);
 
 // Get all problems
