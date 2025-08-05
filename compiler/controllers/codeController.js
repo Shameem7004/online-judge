@@ -10,6 +10,9 @@ const runCode = async (req, res) => {
 
   try {
     const filePath = await generateFile(language, code);
+    if (!filePath) {
+      return res.status(500).json({ success: false, error: 'Failed to generate file' });
+    };
     
     const output = await executeCode(filePath, language);
     return res.json({ success: true, output });
