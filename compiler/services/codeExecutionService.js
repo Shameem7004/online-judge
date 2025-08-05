@@ -1,6 +1,4 @@
-// compiler/services/codeExecutionService.js
-
-// PREVIOUSLY: const { exec } = require('child_process');
+// const { exec } = require('child_process');
 // CHANGE: Switched to the more secure 'execFile' to prevent command injection vulnerabilities.
 const { execFile } = require('child_process');
 const path = require('path');
@@ -23,12 +21,11 @@ const cleanupFiles = (files) => {
 const executeCode = (filepath, language) => {
     const jobId = path.basename(filepath).split('.')[0];
     const outPath = path.join(outputDir, `${jobId}.out`);
+    const codeDir = path.dirname(filepath);
 
     return new Promise((resolve, reject) => {
         let compileCommand, compileArgs, runCommand, runArgs;
 
-        // CHANGE: Added a switch statement to handle different languages.
-        // This makes the service extensible.
         switch (language) {
             case 'cpp':
                 compileCommand = 'g++';
@@ -36,31 +33,62 @@ const executeCode = (filepath, language) => {
                 runCommand = outPath;
                 runArgs = [];
                 break;
-            // You can add other compiled languages like C or Java here in the future
+            case 'c':
+                compileCommand = 'gcc';
+                compileArgs = [filepath, '-o', outPath];
+                runCommand = outPath;
+                runArgs = [];
+                break;
+            case 'java':
+                compileCommand = 'javac';
+                compileArgs = [filepath];
+                runCommand = 'java';
+                // Assumes the file is named Main.java
+                runArgs = ['-cp', codeDir, 'Main'];
+                break;
+            case 'python':
+                // No compilation needed
+                compileCommand = null;
+                runCommand = 'python3';
+                runArgs = [filepath];
+                break;
+            case 'javascript':
+                // No compilation needed
+                compileCommand = null;
+                runCommand = 'node';
+                runArgs = [filepath];
+                break;
             default:
-                // For interpreted languages like Python, we can skip compilation.
-                // For now, we reject unsupported languages.
                 return reject({ stderr: 'Unsupported language' });
         }
 
-        // 1. COMPILE THE CODE
-        execFile(compileCommand, compileArgs, (compileError, stdout, stderr) => {
-            if (compileError || stderr) {
-                cleanupFiles([filepath]); // Clean up the source file on error
-                return reject({ error: compileError, stderr: stderr || compileError.message });
-            }
-
-            // 2. EXECUTE THE COMPILED CODE
+        // Compiled languages
+        if (compileCommand) {
+            execFile(compileCommand, compileArgs, (compileError, stdout, stderr) => {
+                if (compileError || stderr) {
+                    cleanupFiles([filepath]);
+                    return reject({ error: compileError, stderr: stderr || compileError.message });
+                }
+                execFile(runCommand, runArgs, (runError, runStdout, runStderr) => {
+                    console.log('JS execution callback reached:', { runError, runStdout, runStderr, filepath });
+                    cleanupFiles([filepath, outPath]);
+                    if (runError || runStderr) {
+                        console.error('Error during JS execution:', runError, runStderr);
+                        return reject({ error: runError, stderr: runStderr || runError.message });
+                    }
+                    resolve(runStdout);
+                });
+            });
+        } else {
+            // Interpreted languages
             execFile(runCommand, runArgs, (runError, runStdout, runStderr) => {
-                // CHANGE: Implemented robust cleanup for all generated files.
-                cleanupFiles([filepath, outPath]); // Clean up both source and output files
-
+                cleanupFiles([filepath]);
                 if (runError || runStderr) {
                     return reject({ error: runError, stderr: runStderr || runError.message });
                 }
                 resolve(runStdout);
             });
-        });
+        }
     });
 };
 
