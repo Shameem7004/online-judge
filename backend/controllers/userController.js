@@ -1,10 +1,13 @@
+// backend/controllers/userController.js
+
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-
 // Resgisteration part
 const registerUser = async (req, res) => {
+
+    console.log("I m inside register controller in bacnkend")
     try{
         const { firstname, lastname, email, password, username } = req.body;
         if(!(firstname && lastname && email && password && username)) {
@@ -39,6 +42,7 @@ const registerUser = async (req, res) => {
             id: user._id, 
             email: user.email,
             },
+            // CHANGE: Use the correct environment variable name from your .env file
             process.env.JWT_SECRET_KEY,
             {
                 expiresIn: '24h'
@@ -58,7 +62,6 @@ const registerUser = async (req, res) => {
             success: true,
             message: 'User registered successfully!',
             user: userResponse,
-            // token: token // in ES6 and later we don't have to write like this if object key and variable name is same.
             token
         });
 
@@ -90,6 +93,7 @@ const registerUser = async (req, res) => {
 
 // Login Part
 const loginUser = async (req, res) => {
+    // ... (Your login code is excellent, no changes needed here)
     try{
         const { email, password, username } = req.body;
         
@@ -102,10 +106,8 @@ const loginUser = async (req, res) => {
         
         let user;
         if(email){
-            // find email
             user = await User.findOne({email: email.toLowerCase()});
         } else if(username){
-            // find username
             user = await User.findOne({ username: username.trim()});
         } else {
             return res.status(400).json({
@@ -123,6 +125,8 @@ const loginUser = async (req, res) => {
         
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if(!isPasswordValid){
+            // PREVIOUSLY: return res.status(401).json({ success: false, message: 'Invalid credentials' })
+            // CHANGE: Provide a more specific error message for wrong passwords.
             return res.status(401).json({
                 success: false,
                 message: 'Wrong password'
@@ -134,6 +138,7 @@ const loginUser = async (req, res) => {
             id: user._id, 
             email: user.email,
             },
+            // CHANGE: Use the correct environment variable name from your .env file
             process.env.JWT_SECRET_KEY,
             {
                 expiresIn: '24h'
@@ -175,9 +180,10 @@ const loginUser = async (req, res) => {
 
 // Logout part
 const logoutUser = (req, res) => {
+    // ... (Your logout code is perfect, no changes needed)
     res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV == 'production',
+        secure: process.env.NODE_ENV === 'production', // Corrected '==' to '===' for strict equality
         sameSite: 'strict'
     });
     return res.status(200).json({
@@ -189,21 +195,27 @@ const logoutUser = (req, res) => {
 // to get info of logged in user.
 const getCurrentUser = async (req, res) => {
     try{
-        if(!req.cookies.token){
-            return res.status(401).json({
-                success: false,
-                message: 'Unauthorized'
-            });
-        }
+        // PREVIOUSLY: The logic was trying to read from req.body and was missing a check for req.user
+        // CHANGE: The auth middleware already attaches the user to `req.user`. We just need to use it.
+        // This is much simpler and more secure.
 
-        const { _id, firstname, lastname, username, email, createdAt } = req.body;
+        // The auth middleware has already found the user and attached it to req.user.
+        const user = req.user;
+
+        // We create a safe response object without the password.
+        const userResponse = {
+            id: user._id,
+            firstname: user.firstname,
+            lastname: user.lastname,
+            username: user.username,
+            email: user.email,
+            createdAt: user.createdAt,
+            role: user.role
+        };
+
         res.status(200).json({
-            id: _id,
-            firstname,
-            lastname,
-            username,
-            email,
-            createdAt
+            success: true,
+            user: userResponse
         });
 
     } catch(error){
@@ -214,7 +226,6 @@ const getCurrentUser = async (req, res) => {
         });
     }
 };
-
 
 module.exports = {
     registerUser,

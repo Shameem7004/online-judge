@@ -8,12 +8,12 @@ const {
 } = require('../controllers/problemController');
 
 // Create a problem 
-router.post('/', auth, createProblem);
+router.post('/createProblems', auth, createProblem);
 
 // Get all problems
-router.get('/', getAllProblems);
+router.get('/getAllProblems', getAllProblems);
 
 // Get problem by ID or slug
-router.get('/:id', getProblemById);
+router.get('/getProblem/:id', getProblemById);
 
 module.exports = router;

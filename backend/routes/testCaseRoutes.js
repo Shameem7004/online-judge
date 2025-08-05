@@ -9,15 +9,15 @@ const {
 } = require('../controllers/testCaseController');
 
 // Create a test case for a specific problem
-router.post('/:problemId', auth, createTestcase);
+router.post('/createTestCase/:problemId', auth, createTestcase);
 
 // Get all test cases for a specific problem
-router.get('/:problemId', getTestcasesByProblem);
+router.get('/getAllTestCases/:problemId', getTestcasesByProblem);
 
 // Delete a test case by ID
-router.delete('/:testcaseId', auth, deleteTestcase);
+router.delete('/deleteTestCase/:testcaseId', auth, deleteTestcase);
 
 // Update a test case by ID
-router.put('/:testcaseId', auth, updateTestcase);
+router.put('/updateTestCase/:testcaseId', auth, updateTestcase);
 
 module.exports = router;

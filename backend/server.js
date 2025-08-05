@@ -3,14 +3,16 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
 
+
+dotenv.config();
+
 const { DBConnection } = require("./database/db.js");
 const userRoutes = require("./routes/userRoutes.js");
 const problemRoutes = require('./routes/problemRoutes');
 const submissionRoutes = require('./routes/submissionRoutes.js');
 const testCaseRoutes = require('./routes/testCaseRoutes.js');
 
-// Load environment variable
-dotenv.config();
+
 
 // connection to database
 DBConnection();
@@ -20,7 +22,8 @@ const PORT = process.env.PORT || 8080;
 
 // middleware
 app.use(cors({
-    origin: true,
+    // origin: true, // anyone can request.
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
     credentials: true
 }));
 

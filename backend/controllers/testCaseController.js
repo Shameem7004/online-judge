@@ -1,6 +1,6 @@
 const Testcase = require('../models/Testcase');
 const Problem = require('../models/Problem');
-
+// create testcases
 const createTestcase = async (req, res) => {
     const { input, output, isSample } = req.body;
     const { problemId } = req.params;
@@ -29,11 +29,18 @@ const createTestcase = async (req, res) => {
     }
 };
 
+// get the testcases for each problem
 const getTestcasesByProblem = async (req, res) => {
+
     const { problemId } = req.params;
 
     try{
         const testcases = await Testcase.find({ problem: problemId});
+        
+        if(!testcases){
+            return res.status(404).json({ success: false, message: 'Test cases not found' });
+        }
+        
         res.json({ success: true, testcases});
     } catch(error){
         console.error('Error while fetching test cases:', error);
@@ -41,6 +48,7 @@ const getTestcasesByProblem = async (req, res) => {
     } 
 };
 
+// to delete the testcase
 const deleteTestcase = async (req, res) => {
     const { testcaseId } = req.params;
 
@@ -59,6 +67,7 @@ const deleteTestcase = async (req, res) => {
     }
 };
 
+// to update the testcase
 const updateTestcase = async (req, res) => {
     const { testcaseId } = req.params;
     const {input, output, isSample} = req.body;

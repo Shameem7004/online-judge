@@ -11,9 +11,11 @@ export const AuthProvider = ({ children }) => {
         const fetchUser = async () => {
             try {
                 const res = await getCurrentUser(); 
-                setUser(res.data);
-                console.log("User fetched successfully:", res.data);
+                // The actual user object is nested inside the 'user' property
+                setUser(res.data.user);
+                console.log("User fetched successfully:", res.data.user);
             } catch (error) {
+                // If fetching fails (e.g., no token), set user to null
                 setUser(null);
             } finally {
                 setLoading(false);
@@ -24,7 +26,10 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, setUser, loading }}>
-            {children}
+            {/* This prevents a "flicker" where the app briefly shows a logged-out
+              state before the user's session is confirmed.
+            */}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };

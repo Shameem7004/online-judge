@@ -1,7 +1,4 @@
-const { Timestamp } = require('bson');
-const { timeStamp } = require('console');
 const mongoose = require('mongoose');
-const { type } = require('os');
 
 const userSchema = new mongoose.Schema({
     firstname: {
@@ -22,7 +19,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, "Email is required"],
         unique: true,
-        lowecase: true,
+        lowercase: true,
         trim: true,
         validate: {
             validator: function(email){

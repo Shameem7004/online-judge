@@ -1,64 +1,111 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+// frontend/src/pages/ProblemDetailPage.jsx
+
+import { useState, useEffect, useContext } from "react"; // Import useContext
+import { useParams, useNavigate } from "react-router-dom"; // Import useNavigate
 import { getProblem } from "../api/problemApi";
+import { runCode } from "../api/compilerApi"; // CHANGE: Import from the new compiler API service
+// import { createSubmission } from "../api/submissionApi"; // You will need to create this API file
 import Editor from "@monaco-editor/react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { AuthContext } from "../context/AuthContext"; // Import AuthContext
 
+// ... (boilerplate code is good, no changes)
 const boilerplate = {
-  cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!";\n    return 0;\n}',
-  c: '#include <stdio.h>\n\nint main() {\n    printf("Hello, World!");\n    return 0;\n}',
-  java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}',
-  python: 'print("Hello, World!")',
-  javascript: 'console.log("Hello, World!");',
+    cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!";\n    return 0;\n}',
+    c: '#include <stdio.h>\n\nint main() {\n    printf("Hello, World!");\n    return 0;\n}',
+    java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}',
+    python: 'print("Hello, World!")',
+    javascript: 'console.log("Hello, World!");',
 };
 
+
 function ProblemDetailPage() {
-  const { slug } = useParams();
-  const [problem, setProblem] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const { slug } = useParams();
+    const { user } = useContext(AuthContext); // Get the current user
+    const navigate = useNavigate(); // For navigation
+    // ... (all your state variables are perfect)
+    const [problem, setProblem] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  const [language, setLanguage] = useState("cpp");
-  const [code, setCode] = useState(boilerplate.cpp);
-  const [output, setOutput] = useState("");
-  const [isExecuting, setIsExecuting] = useState(false);
+    const [language, setLanguage] = useState("cpp");
+    const [code, setCode] = useState(boilerplate.cpp);
+    const [output, setOutput] = useState("");
+    const [isExecuting, setIsExecuting] = useState(false);
 
-  useEffect(() => {
-    const fetchProblem = async () => {
-      try {
-        const res = await getProblem(slug);
-        setProblem(res.data.problem);
-      } catch (err) {
-        setError("Problem not found or an error occurred.");
-        console.error("Failed to fetch problem:", err.response?.data || err.message);
-      } finally {
-        setLoading(false);
-      }
+
+    // ... (your useEffect hooks for fetching the problem and setting boilerplate are perfect)
+    useEffect(() => {
+        const fetchProblem = async () => {
+            try {
+                const res = await getProblem(slug);
+                setProblem(res.data.problem);
+            } catch (err) {
+                setError("Problem not found or an error occurred.");
+                console.error("Failed to fetch problem:", err.response?.data || err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProblem();
+    }, [slug]);
+
+    useEffect(() => {
+        setCode(boilerplate[language]);
+    }, [language]);
+
+
+    const handleRun = async () => {
+        setIsExecuting(true);
+        setOutput("Running code...");
+        try {
+            // PREVIOUSLY: const res = await fetch('http://localhost:4000/run', ...
+            // CHANGE: Using the organized, environment-variable-aware API service.
+            const res = await runCode(language, code);
+            setOutput(`Output:\n${res.data.output}`);
+        } catch (err) {
+            const errorMessage = err.response?.data?.error || err.message;
+            setOutput(`Error:\n${errorMessage}`);
+        }
+        setIsExecuting(false);
     };
-    fetchProblem();
-  }, [slug]);
 
-  useEffect(() => {
-    setCode(boilerplate[language]);
-  }, [language]);
+    // CHANGE: Implemented the handleSubmit function.
+    const handleSubmit = async () => {
+        if (!user) {
+            alert("Please log in to submit your solution.");
+            navigate('/login');
+            return;
+        }
 
-  const handleRun = async () => {
-    setIsExecuting(true);
-    setOutput(`Running ${language.toUpperCase()} code...`);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setOutput(`Output:\nHello, World!`);
-    setIsExecuting(false);
-  };
+        setIsExecuting(true);
+        setOutput("Submitting code...");
+        try {
+            // This is where you would call your main backend to create a submission record.
+            // The backend would then put this job in a queue for the compiler to pick up for full testing.
+            /*
+            const res = await createSubmission({
+                problemId: problem._id,
+                code,
+                language
+            });
+            setOutput(`Submission successful! Verdict: ${res.data.submission.verdict}`);
+            // You could then navigate to the submission detail page.
+            // navigate(`/submissions/${res.data.submission._id}`);
+            */
+            // For now, we'll simulate it.
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            setOutput(`Result:\nAccepted (Simulation)`);
 
-  const handleSubmit = async () => {
-    setIsExecuting(true);
-    setOutput(`Submitting ${language.toUpperCase()} code...`);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setOutput(`Result:\nAccepted`);
-    setIsExecuting(false);
-  };
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message;
+            setOutput(`Submission failed:\n${errorMessage}`);
+        }
+        setIsExecuting(false);
+    };
 
-  if (loading)
+    // ... (Your JSX is excellent, no changes needed)
+    if (loading)
     return (
       <div className="flex justify-center items-center h-screen">
         <p>Loading problem...</p>

@@ -1,6 +1,8 @@
 const Submission = require('../models/Submission');
 const Problem = require('../models/Problem');
 
+
+// create submission
 const createSubmission = async (req, res) => {
     try{
         const {problemId, code, language} = req.body;
@@ -45,11 +47,13 @@ const createSubmission = async (req, res) => {
     }
 };
 
+
+// get all submissions
 const getAllSubmissions = async (req, res) => {
     try{
         const submissions = await Submission.find()
             .populate('problem', 'name slug')
-            .populate('user', 'name email');
+            .populate('user', 'username email'); 
 
             res.json({ success: true, submissions });
         
@@ -59,18 +63,22 @@ const getAllSubmissions = async (req, res) => {
     }
 };
 
+
+// get submission by Id
 const getSubmissionById = async (req, res) => {
     try{
         const submission = await Submission.findById(req.params.id)
             .populate('problem', 'name slug')
-            .populate('user', 'name email');
+            .populate('user', 'username email');
 
         if(!submission){
             return res.status(404).json({ success: false, message: "Submission not found" });
         }
+        // to send the found submission back to the client.
+        res.status(200).json({ success: true, submission });
 
     } catch(error){
-        console.error("Gete submission by ID error:", error);
+        console.error("Get submission by ID error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };

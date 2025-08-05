@@ -1,10 +1,12 @@
 # Node.js dependencies
 backend/node_modules/
 frontend/node_modules/
+compiler/node_modules/
 
 # Build output
 frontend/dist/
 backend/dist/
+compiler/dist/
 
 # Logs
 *.log
@@ -25,6 +27,7 @@ Thumbs.db
 
 # Vite cache
 frontend/.vite/
+compiler/.vite/
 
 # VSCode settings
 .vscode/

@@ -9,12 +9,12 @@ const {
 
 
 // Create a new submission
-router.post('/', auth, createSubmission);
+router.post('/createSubmission', auth, createSubmission);
 
 // Get all submissions
-router.get('/', getAllSubmissions);
+router.get('/getAllSubmissions', getAllSubmissions);
 
 // Get specific submission
-router.get('/:id', getSubmissionById);
+router.get('/getSubmission/:id', getSubmissionById);
 
 module.exports = router;

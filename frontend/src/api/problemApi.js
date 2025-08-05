@@ -7,13 +7,13 @@ const API = axios.create({
 
 
 // get the problem
-export const getAllProblems = () => API.get('/problems');
+export const getAllProblems = () => API.get('/problems/getAllProblems');
 
 // get a single problem by id or slug
-export const getProblem = (idOrSlug) => API.get(`/problems/${idOrSlug}`);
+export const getProblem = (idOrSlug) => API.get(`/problems/getProblem/${idOrSlug}`);
 
 // create the problem (admin only -> will do later)
-export const createProblem =  (data) => API.post('/problems', data);
+export const createProblem =  (data) => API.post('/problems/createProblems', data);
 
 
 // (Optional) update or delete -> will do later
