@@ -2,7 +2,7 @@ const { generateFile } = require('../utils/generateFile');
 const { executeCode } = require('../services/codeExecutionService');
 
 const runCode = async (req, res) => {
-  const { language, code } = req.body;
+  const { language, code, input } = req.body;
 
   if (!code || !language) {
     return res.status(400).json({ success: false, error: 'Code or language missing' });
@@ -14,7 +14,7 @@ const runCode = async (req, res) => {
       return res.status(500).json({ success: false, error: 'Failed to generate file' });
     };
     
-    const output = await executeCode(filePath, language);
+    const output = await executeCode(filePath, language, input);
     return res.json({ success: true, output });
   } catch (err) {
     const errorMessage = err.stderr || err.message || 'Error executing code';
