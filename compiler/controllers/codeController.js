@@ -10,15 +10,15 @@ const runCode = async (req, res) => {
 
   try {
     const filePath = await generateFile(language, code);
-    if (!filePath) {
-      return res.status(500).json({ success: false, error: 'Failed to generate file' });
-    };
-    
-    const output = await executeCode(filePath, language, input);
-    return res.json({ success: true, output });
+    const { output, executionTime, memoryUsed } = await executeCode(filePath, language, input);
+    return res.json({ success: true, output, executionTime, memoryUsed });
   } catch (err) {
-    const errorMessage = err.stderr || err.message || 'Error executing code';
-    return res.status(500).json({ success: false, error: errorMessage });
+    console.error("Execution/Compilation Error:", err);
+    return res.status(400).json({ 
+        success: false, 
+        error: err.error, 
+        errorType: err.errorType || 'unknown' 
+    });
   }
 };
 
