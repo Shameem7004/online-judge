@@ -21,7 +21,7 @@ app.get('/', (req,res) => {
 
 
 // Server
-const PORT = process.env.PORT || 6000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Compiler service running on port ${PORT}`);
 });
