@@ -1,7 +1,12 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useContext } from "react"; // 1. Import useContext
 import { getCurrentUser } from '../api/userApi';
 
 export const AuthContext = createContext();
+
+// 2. Create and export the custom useAuth hook
+export const useAuth = () => {
+    return useContext(AuthContext);
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -13,7 +18,7 @@ export const AuthProvider = ({ children }) => {
                 const res = await getCurrentUser(); 
                 // The actual user object is nested inside the 'user' property
                 setUser(res.data.user);
-                console.log("User fetched successfully:", res.data.user);
+                if (res.data?.user) { /* silent or add debug flag */ }
             } catch (error) {
                 // If fetching fails (e.g., no token), set user to null
                 setUser(null);
