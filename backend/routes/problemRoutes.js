@@ -1,19 +1,29 @@
+// backend/routes/problemRoutes.js
+
 const express = require('express');
 const router = express.Router();
-const auth = require('../middlewares/auth'); 
 const {
-  createProblem,
-  getAllProblems,
-  getProblemById
+    createProblem,
+    getAllProblems,
+    getProblemById,
+    updateProblem,
+    deleteProblem
 } = require('../controllers/problemController');
+const adminAuth = require('../middlewares/adminAuth');
+const testCaseRoutes = require('./testCaseRoutes');
 
-// Create a problem 
-router.post('/createProblems', auth, createProblem);
 
-// Get all problems
-router.get('/getAllProblems', getAllProblems);
+// 1. Specific routes first
+router.get('/daily', require('../controllers/dailyProblemController').getDailyProblem);
+router.post('/', adminAuth, createProblem);
+router.get('/', getAllProblems);
 
-// Get problem by ID or slug
-router.get('/getProblem/:id', getProblemById);
+// 2. Nested routes
+router.use('/:problemId/testcases', testCaseRoutes);
+
+// 3. Dynamic routes last
+router.get('/:slug', getProblemById);
+router.put('/:id', adminAuth, updateProblem);
+router.delete('/:id', adminAuth, deleteProblem);
 
 module.exports = router;
