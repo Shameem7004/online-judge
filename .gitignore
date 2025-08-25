@@ -18,12 +18,15 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# Environment variables and secrets
 *.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env
+frontend/.env
+compiler/.env
 
 # Vite cache
 frontend/.vite/
@@ -40,6 +43,33 @@ coverage/
 *.swp
 *.swo
 
-# Docker artifacts
+# Docker artifacts and temp files
 backend/docker/*.log
 backend/docker/tmp/
+compiler/codes/
+compiler/docker/*.log
+compiler/docker/tmp/
+
+# MongoDB data (if any local volume is used)
+mongo-data/
+
+# Frontend build artifacts
+frontend/.next/
+frontend/.cache/
+frontend/.turbo/
+
+# IDE files
+.idea/
+*.iml
+
+# Test output
+test-output/
+__pycache__/
+*.pyc
+
+# Static analysis
+.eslintcache
+
+# Other temp files
+tmp/
+temp/
