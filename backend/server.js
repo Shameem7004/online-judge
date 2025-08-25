@@ -24,7 +24,8 @@ const PORT = process.env.PORT || 8080;
 // middleware
 app.use(cors({
     // origin: true, // anyone can request.
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
+    // origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
+    origin: 'https://online-judge-iota-three.vercel.app', // <-- Use your actual frontend URL, no trailing slash
     credentials: true
 }));
 
