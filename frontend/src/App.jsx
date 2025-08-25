@@ -66,7 +66,7 @@ function App() {
 
           {/* Protected User Routes */}
           <Route path="/submissions" element={<SubmissionsPage />} />
-          <Route path="/submissions/:id" element={<SubmissionDetailPage />} />
+          <Route path="/submissions/:id" element={<IndividualSubmissionPage />} />
           <Route path='/profile' element={<ProfilePage />} />
 
           {/* Protected Admin Route */}
