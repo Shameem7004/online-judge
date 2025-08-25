@@ -1,17 +1,17 @@
-@import 'tailwindcss';
-/* @tailwind base;
-@tailwind components;
-@tailwind utilities; */
+@import "tailwindcss";
 
+/* Ensure full-height layout so inner panels can scroll */
+html, body, #root {
+  height: 100%;
+}
+
+/* existing styles */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light dark;
-  color: #213547; 
-  background-color: #ffffff; 
-
+  /* FIX: Removed color and background-color, Tailwind will handle this */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,4 +22,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  /* FIX: Removed background-image to allow dark mode background to show */
+}
+
+a, .cursor-pointer {
+  cursor: pointer;
 }
