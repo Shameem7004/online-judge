@@ -1,14 +1,12 @@
 const { Queue } = require('bullmq');
 
-// This is the connection to your Redis server.
-// It will automatically use the details from your .env file if they exist,
-// otherwise it defaults to the standard localhost port.
 const redisConnection = {
   host: process.env.REDIS_HOST || '127.0.0.1',
   port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || undefined,
+  tls: process.env.REDIS_TLS === 'true' ? {} : undefined, // For Upstash, set REDIS_TLS=true
 };
 
-// Create and export the queue. We'll name it 'submissionQueue'.
 const submissionQueue = new Queue('submissionQueue', {
   connection: redisConnection,
   defaultJobOptions: {
