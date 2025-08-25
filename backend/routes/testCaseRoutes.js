@@ -1,23 +1,18 @@
 const express = require('express');
-const router = express.Router();
-const auth = require('../middlewares/auth');
-const {
-  createTestcase,
-  getTestcasesByProblem,
-  deleteTestcase,
-  updateTestcase
-} = require('../controllers/testCaseController');
+const router = express.Router({ mergeParams: true }); 
+const testCaseController = require('../controllers/testCaseController');
+const adminAuth = require('../middlewares/adminAuth');
 
-// Create a test case for a specific problem
-router.post('/createTestCase/:problemId', auth, createTestcase);
+// Get all testcases for a problem
+router.get('/', adminAuth, testCaseController.getTestcases);
 
-// Get all test cases for a specific problem
-router.get('/getAllTestCases/:problemId', getTestcasesByProblem);
+// Add a testcase to a problem
+router.post('/', adminAuth, testCaseController.createTestcase);
 
-// Delete a test case by ID
-router.delete('/deleteTestCase/:testcaseId', auth, deleteTestcase);
+// Update a testcase
+router.put('/:testcaseId', adminAuth, testCaseController.updateTestcase);
 
-// Update a test case by ID
-router.put('/updateTestCase/:testcaseId', auth, updateTestcase);
+// Delete a testcase
+router.delete('/:testcaseId', adminAuth, testCaseController.deleteTestcase);
 
 module.exports = router;

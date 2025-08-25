@@ -2,7 +2,8 @@ const Testcase = require('../models/Testcase');
 const Problem = require('../models/Problem');
 // create testcases
 const createTestcase = async (req, res) => {
-    const { input, output, isSample } = req.body;
+    // 1. Destructure the new displayInput field from the body
+    const { input, output, explanation, isSample, displayInput } = req.body;
     const { problemId } = req.params;
 
     try{
@@ -18,6 +19,9 @@ const createTestcase = async (req, res) => {
             problem: problemId,
             input, 
             output,
+            explanation,
+            // 2. Add displayInput to the creation object
+            displayInput,
             isSample: isSample || false
         });
 
@@ -29,23 +33,15 @@ const createTestcase = async (req, res) => {
     }
 };
 
-// get the testcases for each problem
-const getTestcasesByProblem = async (req, res) => {
-
+// Get all testcases for a problem
+const getTestcases = async (req, res) => {
+  try {
     const { problemId } = req.params;
-
-    try{
-        const testcases = await Testcase.find({ problem: problemId});
-        
-        if(!testcases){
-            return res.status(404).json({ success: false, message: 'Test cases not found' });
-        }
-        
-        res.json({ success: true, testcases});
-    } catch(error){
-        console.error('Error while fetching test cases:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    } 
+    const testcases = await Testcase.find({ problem: problemId });
+    res.json({ success: true, testcases });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch testcases' });
+  }
 };
 
 // to delete the testcase
@@ -70,7 +66,8 @@ const deleteTestcase = async (req, res) => {
 // to update the testcase
 const updateTestcase = async (req, res) => {
     const { testcaseId } = req.params;
-    const {input, output, isSample} = req.body;
+    // 3. Destructure the new displayInput field here as well
+    const {input, output, explanation, isSample, displayInput} = req.body;
 
     try{
         const testcase = await Testcase.findById(testcaseId);
@@ -81,6 +78,9 @@ const updateTestcase = async (req, res) => {
         if(input !== undefined) testcase.input = input;
         if(output !== undefined) testcase.output = output;
         if(isSample !== undefined) testcase.isSample = isSample;
+        if(explanation !== undefined) testcase.explanation = explanation;
+        // 4. Add the update logic for the new field
+        if(displayInput !== undefined) testcase.displayInput = displayInput;
 
         await testcase.save();
         res.json({ success: true, testcase });
@@ -93,7 +93,7 @@ const updateTestcase = async (req, res) => {
 
 module.exports = {
     createTestcase,
-    getTestcasesByProblem,
+    getTestcases,
     deleteTestcase,
     updateTestcase
 };
