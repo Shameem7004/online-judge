@@ -73,3 +73,7 @@ __pycache__/
 # Other temp files
 tmp/
 temp/
+
+# Ignore keys directory and key files
+keys/
+*.pem
