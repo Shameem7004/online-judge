@@ -26,43 +26,42 @@ const problemSchema = new mongoose.Schema({
     type: String,
     enum: ['Easy', 'Medium', 'Hard'],
     required: true,
-    index: true
   },
   points: {
     type: Number,
-    default: 100,
-    min: [0, "Points cannot be negative"]
+    required: true,
   },
   topics: [{
     type: String,
     trim: true
-  }],
-  hints: [{
-    text: String,
-    pointsRequired: { type: Number, min: 0 }
   }],
   constraints: {
     timeLimit: { type: Number, default: 1000 },
     memoryLimit: { type: Number, default: 256 },
     custom: String
   },
-  samples: [{
-    input: String,
-    output: String,
-    explanation: String
-  }],
-  tags: [{
-    type: String
-  }],
+  tags: {
+    type: [String],
+    default: [],
+  },
   author: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  submissions: {
-    total: { type: Number, default: 0 },
-    successful: { type: Number, default: 0 },
-    acceptanceRate: { type: Number, default: 0 }
-  }
+  inputFormat: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  outputFormat: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  testCases: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Testcase',
+  }],
 }, {
   timestamps: true
 });
