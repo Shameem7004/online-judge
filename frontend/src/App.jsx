@@ -11,7 +11,7 @@ import AllProblemsPage from './pages/AllProblemsPage';
 import ProblemDetailPage from './pages/ProblemDetailPage';
 import LeaderboardPage from './pages/LeaderBoardPage'; // Correctly imported as LeaderboardPage
 import SubmissionsPage from './pages/SubmissionsPage';
-import SubmissionDetailPage from './pages/submissionDetailPage';
+import SubmissionDetailPage from './pages/SubmissionDetailPage';
 import PublicProfilePage from './pages/PublicProfilePage';
 import ProfilePage from './pages/ProfilePage';
 import ContestsPage from './pages/ContestsListingPage';
