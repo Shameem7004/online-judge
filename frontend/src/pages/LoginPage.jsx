@@ -2,8 +2,11 @@ import { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; 
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../api/userApi';
+import { useNotification } from '../context/NotificationContext'; 
+import '../index.css'; // Ensure styles are applied
 
 function LoginPage() {
+  const { addNotification } = useNotification(); 
   const { setUser } = useContext(AuthContext);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -23,19 +26,25 @@ function LoginPage() {
       console.log('Login successful:', res.data);
 
       setUser(res.data.user);
+      addNotification(`Welcome back, ${res.data.user.username}!`);
+
       navigate('/'); 
     } catch (error) {
       console.log('Login error:', error.response?.data || error.message);
-      alert(error.response?.data?.message || 'Login failed');
+      const message = error.response?.data?.message || 'Login failed';
+      addNotification(message, 'error');
     }
   };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-50">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-3xl font-extrabold text-center text-gray-900">
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
           Welcome Back!
-        </h2>
+        </h1>
+        <p className="text-lg text-gray-600">
+          Log in to continue your coding journey.
+        </p>
         <form className="space-y-6" onSubmit={handleLogin}>
           <div>
             <input

@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useNavigate, Link } from 'react-router-dom'; 
 import { registerUser } from "../api/userApi";
+import { useNotification } from '../context/NotificationContext'; // 1. Import the hook
+import '../index.css'; // Ensure styles are applied
 
 function RegisterPage() {
+    const { addNotification } = useNotification(); // 2. Get the function from context
     const [formData, setFormData] = useState({
         firstname: '',
         lastname: '',
@@ -21,19 +24,20 @@ function RegisterPage() {
         try {
             const res = await registerUser(formData);
             console.log('Registration Successful:', res.data);
-            alert('Registration successful! Please log in.');
+            addNotification('Registration successful! Please log in.'); // 3. Show success notification
             // Navigate to login page
             navigate('/login'); 
         } catch (error) {
             console.error('Registration error:', error.response?.data || error.message);
-            alert(error.response?.data?.message || 'Registration failed');
+            addNotification(error.response?.data?.message || 'Registration failed', 'error');
         }
     };
 
     return (
         <div className="flex justify-center items-center min-h-screen bg-gray-50">
             <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-                <h2 className="text-3xl font-extrabold text-center text-gray-900">Create Your Account</h2>
+                <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Create Your Account</h1>
+                <p className="text-lg text-gray-600">Please fill in the details below to register.</p>
                 <form className="space-y-4" onSubmit={handleRegister}>
                     <div className="flex space-x-4">
                         <input name="firstname" type="text" placeholder="First Name" value={formData.firstname} onChange={handleChange} required className="w-1/2 px-4 py-2 text-gray-900 bg-gray-100 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
