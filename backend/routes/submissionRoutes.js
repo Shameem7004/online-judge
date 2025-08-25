@@ -1,20 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middlewares/auth'); 
+const { auth } = require('../middlewares/auth');
 const {
-  createSubmission,
+  initiateSubmission,
+  streamSubmissionResults,
   getAllSubmissions,
-  getSubmissionById
+  getSubmissionById,
+  getMySubmissions
 } = require('../controllers/submissionController');
 
+//  This route now only initiates the submission
+router.post('/', auth, initiateSubmission);
 
-// Create a new submission
-router.post('/createSubmission', auth, createSubmission);
+// NEW: This route streams the results
+router.get('/stream/:id', auth, streamSubmissionResults);
 
-// Get all submissions
-router.get('/getAllSubmissions', getAllSubmissions);
+// Get all submissions for the logged-in user
+router.get('/', auth, getAllSubmissions);
 
-// Get specific submission
-router.get('/getSubmission/:id', getSubmissionById);
+// Get all submissions for the logged-in user (alternative route)
+router.get('/me', auth, getMySubmissions);
+
+// Get a specific submission by its ID
+router.get('/:id', auth, getSubmissionById);
 
 module.exports = router;
