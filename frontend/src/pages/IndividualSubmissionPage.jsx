@@ -16,7 +16,7 @@ const CheckIcon = () => (
   </svg>
 );
 
-function SubmissionDetailPage() {
+function IndividualSubmissionPage() {
   const { id } = useParams();
   const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -207,4 +207,4 @@ function SubmissionDetailPage() {
   );
 }
 
-export default SubmissionDetailPage;
+export default IndividualSubmissionPage;
