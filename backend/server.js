@@ -11,8 +11,9 @@ const userRoutes = require("./routes/userRoutes.js");
 const problemRoutes = require('./routes/problemRoutes');
 const submissionRoutes = require('./routes/submissionRoutes.js');
 const testCaseRoutes = require('./routes/testCaseRoutes.js');
-
-
+const aiRoutes = require('./routes/aiRoutes');
+const contestRoutes = require('./routes/contestRoutes');
+const adminRoutes = require('./routes/adminRoutes'); // Import admin routes
 
 // connection to database
 DBConnection();
@@ -38,9 +39,12 @@ app.use('/api/users', userRoutes);
 app.use('/api/problems', problemRoutes);
 // submission route
 app.use('/api/submissions', submissionRoutes);
-// testCase route
-app.use('/api/testcases', testCaseRoutes);
-
+// AI route
+app.use('/api/ai', aiRoutes); // FIX: Removed /v1
+// Contest route
+app.use('/api/contests', contestRoutes); // FIX: Removed /v1
+// Admin route
+app.use('/api/admin', adminRoutes); // FIX: Removed /v1
 
 // test route
 app.get('/', (req, res) => {
@@ -51,6 +55,17 @@ app.get('/', (req, res) => {
     });
 });
 
+// Add this route for SSE connection keepalive
+app.get('/api/ping', (req, res) => {
+    res.status(200).json({ timestamp: Date.now() });
+});
+
+
+// Error Handling Middlewares
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on ${PORT}`);
