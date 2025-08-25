@@ -19,6 +19,8 @@ const { DBConnection } = require('./database/db');
 const redisConnection = {
   host: process.env.REDIS_HOST || '127.0.0.1',
   port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || undefined,
+  tls: process.env.REDIS_TLS === 'true' ? {} : undefined
 };
 
 // The main processing function for each job
@@ -141,14 +143,14 @@ const startWorker = async () => {
   });
 
   worker.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} has completed!`);
+    console.log(`Job ${job.id} has completed!`);
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`❌ Job ${job.id} has failed with ${err.message}`);
+    console.error(`Job ${job.id} has failed with ${err.message}`);
   });
 
-  console.log('🚀 Submission worker is ready and waiting for jobs...');
+  console.log('Submission worker is ready and waiting for jobs...');
 };
 
 startWorker();

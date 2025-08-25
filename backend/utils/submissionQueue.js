@@ -10,11 +10,8 @@ const redisConnection = {
 const submissionQueue = new Queue('submissionQueue', {
   connection: redisConnection,
   defaultJobOptions: {
-    attempts: 3, // Retry failed jobs up to 3 times
-    backoff: {
-      type: 'exponential',
-      delay: 5000, // Wait 5s before first retry, 10s for second, etc.
-    },
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
   },
 });
 
