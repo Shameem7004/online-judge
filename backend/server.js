@@ -21,25 +21,27 @@ DBConnection();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// --- FIX: Replace the existing cors middleware with this more robust configuration ---
+// middleware
 const allowedOrigins = [
-    'https://online-judge-1f5tyqn5z-md-shameem-alams-projects.vercel.app/',
-    process.env.FRONTEND_URL || 'http://localhost:5173'
+    'https://algo-codeverse.vercel.app',  // Your new Vercel frontend
+    // 'https://online-judge-iota-three.vercel.app',  // Your old Vercel frontend (if still needed)
+    process.env.FRONTEND_URL || 'http://localhost:5173'  // Local development
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
+        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
+        } else {
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
             return callback(new Error(msg), false);
         }
-        return callback(null, true);
     },
     credentials: true
 }));
-// --- End of FIX ---
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
