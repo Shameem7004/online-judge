@@ -21,13 +21,25 @@ DBConnection();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// middleware
+// --- FIX: Replace the existing cors middleware with this more robust configuration ---
+const allowedOrigins = [
+    'https://online-judge-iota-three.vercel.app',
+    process.env.FRONTEND_URL || 'http://localhost:5173'
+];
+
 app.use(cors({
-    // origin: true, // anyone can request.
-    // origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
-    origin: 'https://online-judge-iota-three.vercel.app', // <-- Use your actual frontend URL, no trailing slash
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
     credentials: true
 }));
+// --- End of FIX ---
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
