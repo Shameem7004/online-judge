@@ -23,7 +23,8 @@ const PORT = process.env.PORT || 8080;
 
 // middleware
 const allowedOrigins = [
-    'https://www.codeversee.in', // FIX: Add your new custom domain
+    'https://www.codeversee.in', 
+    'https://codeversee.in',
     'https://algo-codeverse.vercel.app',
     process.env.FRONTEND_URL || 'http://localhost:5173'
 ];
