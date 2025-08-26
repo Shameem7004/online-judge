@@ -23,9 +23,9 @@ const PORT = process.env.PORT || 8080;
 
 // middleware
 const allowedOrigins = [
-    'https://algo-codeverse.vercel.app',  // Your new Vercel frontend
-    // 'https://online-judge-iota-three.vercel.app',  // Your old Vercel frontend (if still needed)
-    process.env.FRONTEND_URL || 'http://localhost:5173'  // Local development
+    'https://www.codeversee.in', // FIX: Add your new custom domain
+    'https://algo-codeverse.vercel.app',
+    process.env.FRONTEND_URL || 'http://localhost:5173'
 ];
 
 app.use(cors({
