@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 8080;
 
 // --- FIX: Replace the existing cors middleware with this more robust configuration ---
 const allowedOrigins = [
-    'https://online-judge-iota-three.vercel.app',
+    'https://online-judge-1f5tyqn5z-md-shameem-alams-projects.vercel.app/',
     process.env.FRONTEND_URL || 'http://localhost:5173'
 ];
 
