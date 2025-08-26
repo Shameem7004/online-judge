@@ -148,12 +148,12 @@ const loginUser = async (req, res) => {
             }
         );
 
-        const cookieOptions = {
-            expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
-        };
+            secure: process.env.NODE_ENV === 'production', // Set to true in production
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site
+            maxAge: 3 * 24 * 60 * 60 * 1000 // 3 days
+        });
 
         const userResponse = {
             id: user._id,
@@ -164,7 +164,6 @@ const loginUser = async (req, res) => {
         };
 
         return res.status(200)
-        .cookie("token", token, cookieOptions)
         .json({
             success: true,
             message: 'Login successful!',
