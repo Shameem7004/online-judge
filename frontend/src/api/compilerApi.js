@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-const COMPILER_API = axios.create({
-    baseURL: import.meta.env.VITE_COMPILER_API_URL,
+const compilerApi = axios.create({
+  baseURL: import.meta.env.VITE_COMPILER_API_URL || 'http://localhost:3000/compiler/api',
 });
 
-export const runCode = (language, code, input = "") =>
-    COMPILER_API.post('/run', { language, code, input });
+export const runCode = async (code, language, input) => {
+  const response = await compilerApi.post('/run', { code, language, input });
+  return response.data;
+};
