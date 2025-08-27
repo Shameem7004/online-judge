@@ -183,16 +183,47 @@ function ProblemDetailPage() {
     });
   };
 
+  // Add this function to process Java code and add missing imports
+  const processJavaCode = (javaCode) => {
+    if (language !== 'java') {
+      return javaCode;
+    }
+
+    const requiredImports = {
+      'Scanner': 'import java.util.Scanner;',
+      'List': 'import java.util.List;',
+      'ArrayList': 'import java.util.ArrayList;',
+      'Map': 'import java.util.Map;',
+      'HashMap': 'import java.util.HashMap;',
+      'Set': 'import java.util.Set;',
+      'HashSet': 'import java.util.HashSet;',
+    };
+
+    let importsToAdd = new Set();
+    for (const className in requiredImports) {
+      // Check if the class is used and not already imported
+      if (javaCode.includes(className) && !javaCode.includes(requiredImports[className])) {
+        importsToAdd.add(requiredImports[className]);
+      }
+    }
+
+    if (importsToAdd.size > 0) {
+      return [...importsToAdd].join('\n') + '\n\n' + javaCode;
+    }
+
+    return javaCode;
+  };
+
   const handleRun = async () => {
     setIsExecuting(true);
     setOutput('');
     setError(null);
     try {
-      // FIX: Update console.log to match the new function signature
-      console.log("Sending to compiler:", { code, language, input: customInput });
+      // Process Java code to add missing imports
+      const codeToRun = processJavaCode(code);
+      console.log("Sending to compiler:", { code: codeToRun, language, input: customInput });
 
-      // This call is already correct
-      const result = await runCode({ code, language, input: customInput });
+      const result = await runCode({ code: codeToRun, language, input: customInput });
       if (result.success) {
         setOutput(result.output);
       } else {
@@ -253,9 +284,12 @@ function ProblemDetailPage() {
         eventSourceRef.current.close();
       }
 
+      // Process Java code to add missing imports for submission too
+      const codeToSubmit = processJavaCode(code);
+
       const response = await initiateSubmission({
         problemId: problem._id,
-        code,
+        code: codeToSubmit,
         language,
       });
 
