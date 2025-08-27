@@ -96,10 +96,13 @@ function ProblemDetailPage() {
   const [problem, setProblem] = useState(null);
   const [sampleTestcases, setSampleTestcases] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // FIX: Renamed 'error' to 'pageError' for clarity. This is for fatal page load errors.
+  const [pageError, setPageError] = useState(null);
   const [language, setLanguage] = useState("cpp");
   const [code, setCode] = useState(BOILERPLATE.cpp);
   const [output, setOutput] = useState("");
+  // FIX: Added 'runError' state for compilation/runtime errors to be shown in the output panel.
+  const [runError, setRunError] = useState(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [customInput, setCustomInput] = useState("");
   const [submissionProgress, setSubmissionProgress] = useState(null);
@@ -153,7 +156,8 @@ function ProblemDetailPage() {
         setSampleTestcases(samples);
 
       } catch (err) {
-        setError('Failed to load the problem. It may not exist.');
+        // FIX: Use setPageError for fatal page load errors.
+        setPageError('Failed to load the problem. It may not exist.');
         console.error(err);
       } finally {
         setLoading(false);
@@ -217,20 +221,28 @@ function ProblemDetailPage() {
   const handleRun = async () => {
     setIsExecuting(true);
     setOutput('');
-    setError(null);
+    // FIX: Clear the specific runError state.
+    setRunError(null);
+    setSubmissionProgress(null);
     try {
-      // Process Java code to add missing imports
       const codeToRun = processJavaCode(code);
-      // console.log("Sending to compiler:", { code: codeToRun, language, input: customInput });
-
       const result = await runCode({ code: codeToRun, language, input: customInput });
+
       if (result.success) {
         setOutput(result.output);
       } else {
-        setError(result.error || 'An unknown error occurred.');
+        // FIX: Set runError for non-crashing server-side errors.
+        setRunError(result.error?.error || result.error || 'An unknown error occurred.');
       }
     } catch (err) {
-      setError(err.message || 'Failed to run code.');
+      // FIX: This block now handles network errors (like 400 Bad Request)
+      // and sets the error message in runError to be displayed in the output panel.
+      if (err.response && err.response.data && err.response.data.error) {
+        const serverError = err.response.data.error;
+        setRunError(serverError.error || serverError);
+      } else {
+        setRunError(err.message || 'Failed to run code.');
+      }
     } finally {
       setIsExecuting(false);
     }
@@ -273,6 +285,7 @@ function ProblemDetailPage() {
     setIsJudging(true);
     setIsExecuting(true);
     setOutput(""); 
+    setRunError(null);
     setSubmissionProgress({
       results: [],
       verdict: 'Judging...'
@@ -284,7 +297,6 @@ function ProblemDetailPage() {
         eventSourceRef.current.close();
       }
 
-      // Process Java code to add missing imports for submission too
       const codeToSubmit = processJavaCode(code);
 
       const response = await initiateSubmission({
@@ -345,7 +357,8 @@ function ProblemDetailPage() {
       };
     } catch (error) {
       console.error('Submission failed', error);
-      setOutput(`Submission Failed:\n${error.response?.data?.message || error.message}`);
+      // FIX: Use setRunError for submission initiation errors.
+      setRunError(`Submission Failed:\n${error.response?.data?.message || error.message}`);
       setIsJudging(false);
       setIsExecuting(false);
     }
@@ -360,7 +373,8 @@ function ProblemDetailPage() {
   }, [problem]);
 
   if (loading) return <div className="flex justify-center items-center h-screen text-slate-900">Loading...</div>;
-  if (error) return <div className="flex justify-center items-center h-screen text-rose-600">{error}</div>;
+  // FIX: Check for pageError here.
+  if (pageError) return <div className="flex justify-center items-center h-screen text-rose-600">{pageError}</div>;
 
   // MOBILE LAYOUT (0-767px)
   if (deviceType === 'mobile') {
@@ -534,6 +548,7 @@ function ProblemDetailPage() {
                             Output
                           </div>
                           <div className="flex-1 bg-[#1e1e1e] overflow-auto">
+                            {/* FIX: Conditionally render runError or output */}
                             {submissionProgress ? (
                               <div className="h-full overflow-y-auto">
                                 <SubmissionProgress 
@@ -543,8 +558,8 @@ function ProblemDetailPage() {
                                 />
                               </div>
                             ) : (
-                              <pre className="h-full w-full text-white font-mono whitespace-pre-wrap p-2 text-sm">
-                                {output}
+                              <pre className={`h-full w-full font-mono whitespace-pre-wrap p-2 text-sm ${runError ? 'text-rose-400' : 'text-white'}`}>
+                                {runError || output}
                               </pre>
                             )}
                           </div>
@@ -573,6 +588,7 @@ function ProblemDetailPage() {
     return (
       <div className="h-[calc(100vh-4rem)] w-full min-h-0 overflow-hidden">
         <PanelGroup direction="horizontal" className="h-full min-h-0">
+          {/* ... (no changes needed in the problem description part) ... */}
           <Panel defaultSize={45} minSize={10}>
             <div className="p-4 overflow-y-auto h-full bg-white">
               <h1 className="text-2xl font-bold mb-3 text-slate-900">{problem.name}</h1>
@@ -707,6 +723,7 @@ function ProblemDetailPage() {
                         Output
                       </div>
                       <div className="flex-grow min-h-0 relative bg-[#1e1e1e] overflow-auto">
+                        {/* FIX: Conditionally render runError or output */}
                         {submissionProgress ? (
                           <SubmissionProgress 
                             progress={submissionProgress} 
@@ -714,8 +731,8 @@ function ProblemDetailPage() {
                             isJudging={isJudging}
                           />
                         ) : (
-                          <pre className="h-full w-full text-white font-mono whitespace-pre-wrap p-3 text-sm">
-                            {output}
+                          <pre className={`h-full w-full font-mono whitespace-pre-wrap p-3 text-sm ${runError ? 'text-rose-400' : 'text-white'}`}>
+                            {runError || output}
                           </pre>
                         )}
                       </div>
@@ -741,6 +758,7 @@ function ProblemDetailPage() {
   return (
     <div className="h-[calc(100vh-4rem)] w-full min-h-0 overflow-hidden">
       <PanelGroup direction="horizontal" className="h-full min-h-0">
+        {/* ... (no changes needed in the problem description part) ... */}
         <Panel defaultSize={50} minSize={10}>
           <div className="p-6 overflow-y-auto h-full bg-white">
             <h1 className="text-3xl font-bold mb-4 text-slate-900">{problem.name}</h1>
@@ -876,6 +894,7 @@ function ProblemDetailPage() {
                         Output
                       </div>
                       <div className="flex-grow min-h-0 relative bg-[#1e1e1e] overflow-auto">
+                        {/* FIX: Conditionally render runError or output */}
                         {submissionProgress ? (
                           <SubmissionProgress 
                             progress={submissionProgress} 
@@ -883,8 +902,8 @@ function ProblemDetailPage() {
                             isJudging={isJudging}
                           />
                         ) : (
-                          <pre className="h-full w-full text-white font-mono whitespace-pre-wrap p-3 text-xs leading-tight">
-                            {output}
+                          <pre className={`h-full w-full font-mono whitespace-pre-wrap p-3 text-xs leading-tight ${runError ? 'text-rose-400' : 'text-white'}`}>
+                            {runError || output}
                           </pre>
                         )}
                       </div>
