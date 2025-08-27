@@ -22,30 +22,39 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // middleware
-const allowedOrigins = [
-    'https://www.codeversee.in', 
-    'https://codeversee.in',
-    'https://algo-codeverse.vercel.app',
-    process.env.FRONTEND_URL, // This will now be without a slash
-    'http://localhost:5173'
-].filter(Boolean); // Filter out undefined/null values if FRONTEND_URL is not set
+const RAW_ALLOWED = [
+  'https://www.codeversee.in',
+  'https://codeversee.in',
+  'https://algo-codeverse.vercel.app',
+  'https://online-judge-g224cul22-md-shameem-alams-projects.vercel.app',
+  process.env.FRONTEND_URL,
+  'http://localhost:5173'
+].filter(Boolean);
+
+// A more robust function to check origins
+function isAllowedOrigin(origin) {
+  const normalized = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+
+  // Check against the explicit list first
+  if (RAW_ALLOWED.includes(normalized)) {
+    return true;
+  }
+
+  // Allow any subdomain of vercel.app (for future previews)
+  if (normalized.endsWith('.vercel.app')) {
+    return true;
+  }
+
+  return false;
+}
 
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        // Normalize the origin by removing a potential trailing slash
-        const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
-
-        if (allowedOrigins.includes(normalizedOrigin)) {
-            return callback(null, true);
-        } else {
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-            return callback(new Error(msg), false);
-        }
-    },
-    credentials: true
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // non-browser tools
+    if (isAllowedOrigin(origin)) return cb(null, true);
+    return cb(new Error('CORS: Origin not allowed'), false);
+  },
+  credentials: true
 }));
 
 app.use(express.json());

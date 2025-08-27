@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Create an Axios instance
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
+  // FIX: The fallback URL should NOT have /api
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
   withCredentials: true, // Add this to send cookies with requests
   headers: {
     'Content-Type': 'application/json',
