@@ -221,7 +221,7 @@ function ProblemDetailPage() {
     try {
       // Process Java code to add missing imports
       const codeToRun = processJavaCode(code);
-      console.log("Sending to compiler:", { code: codeToRun, language, input: customInput });
+      // console.log("Sending to compiler:", { code: codeToRun, language, input: customInput });
 
       const result = await runCode({ code: codeToRun, language, input: customInput });
       if (result.success) {
