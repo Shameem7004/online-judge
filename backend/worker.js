@@ -55,7 +55,8 @@ const processSubmission = async (job) => {
       };
 
       try {
-        const compilerResponse = await axios.post(`${process.env.COMPILER_URL}/compiler/api/run`, {
+        // FIX: Update URL to match your compiler service route
+        const compilerResponse = await axios.post(`${process.env.COMPILER_URL}/api/run`, {
           code: submission.code,
           language: submission.language,
           input: testcase.input

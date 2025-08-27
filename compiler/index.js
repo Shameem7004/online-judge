@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/compiler/api', codeRoutes);
+app.use('/api', codeRoutes);
 
 
 

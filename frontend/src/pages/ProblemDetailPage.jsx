@@ -184,30 +184,22 @@ function ProblemDetailPage() {
   };
 
   const handleRun = async () => {
-    if (deviceType === 'mobile') {
-      setMobileActiveTab('editor');
-    }
-    
     setIsExecuting(true);
-    setOutput("Executing...");
-    setSubmissionProgress(null);
-    
+    setOutput('');
+    setError(null);
     try {
-      const res = await runCode(language, code, customInput);
-      
-      let resultText = `--- Execution Finished ---\n`;
-      resultText += `Output:\n${res.data.output}\n\n`;
-      resultText += `Execution Time: ${res.data.executionTime || 'N/A'} ms\n`;
-      resultText += `Memory Used: ${res.data.memoryUsed || 'N/A'} KB`;
-      
-      setOutput(resultText);
-    } catch (err) {
-      const errorData = err.response?.data;
-      if (errorData && errorData.errorType === 'compilation') {
-        setOutput(`--- Compilation Error ---\n${errorData.error}`);
+      // FIX: Update console.log to match the new function signature
+      console.log("Sending to compiler:", { code, language, input: customInput });
+
+      // This call is already correct
+      const result = await runCode({ code, language, input: customInput });
+      if (result.success) {
+        setOutput(result.output);
       } else {
-        setOutput(`--- Runtime Error ---\n${errorData?.error || err.message}`);
+        setError(result.error || 'An unknown error occurred.');
       }
+    } catch (err) {
+      setError(err.message || 'Failed to run code.');
     } finally {
       setIsExecuting(false);
     }
