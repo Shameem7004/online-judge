@@ -54,17 +54,17 @@ app.use(cookieParser());
 
 
 // users route
-app.use('/api/users', userRoutes);
+app.use('/users', userRoutes);
 // problems route
-app.use('/api/problems', problemRoutes);
+app.use('/problems', problemRoutes);
 // submission route
-app.use('/api/submissions', submissionRoutes);
+app.use('/submissions', submissionRoutes);
 // AI route
-app.use('/api/ai', aiRoutes); // FIX: Removed /v1
+app.use('/ai', aiRoutes); // FIX: Removed /v1
 // Contest route
-app.use('/api/contests', contestRoutes); // FIX: Removed /v1
+app.use('/contests', contestRoutes); // FIX: Removed /v1
 // Admin route
-app.use('/api/admin', adminRoutes); // FIX: Removed /v1
+app.use('/admin', adminRoutes); // FIX: Removed /v1
 
 // test route
 app.get('/', (req, res) => {
