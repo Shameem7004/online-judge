@@ -2,7 +2,6 @@ import axios from 'axios';
 
 // Create an Axios instance
 const apiClient = axios.create({
-  // FIX: Use VITE_API_URL to match your .env file and other API files
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
   withCredentials: true, // Add this to send cookies with requests
   headers: {
