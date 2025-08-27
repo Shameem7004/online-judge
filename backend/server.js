@@ -26,15 +26,19 @@ const allowedOrigins = [
     'https://www.codeversee.in', 
     'https://codeversee.in',
     'https://algo-codeverse.vercel.app',
-    process.env.FRONTEND_URL || 'http://localhost:5173'
-];
+    process.env.FRONTEND_URL, // This will now be without a slash
+    'http://localhost:5173'
+].filter(Boolean); // Filter out undefined/null values if FRONTEND_URL is not set
 
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // Normalize the origin by removing a potential trailing slash
+        const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+
+        if (allowedOrigins.includes(normalizedOrigin)) {
             return callback(null, true);
         } else {
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
