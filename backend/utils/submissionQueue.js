@@ -1,26 +1,33 @@
-import { Redis } from '@upstash/redis';
-const { Queue } = require('bullmq');
+const redis = require('redis');
+const Bull = require('bull');
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+// Create Redis client using the URL
+const redisClient = redis.createClient({
+  url: process.env.REDIS_URL,
+  socket: {
+    tls: true,
+    rejectUnauthorized: false
+  }
 });
 
-const redisConnection = {
-  host: process.env.REDIS_HOST || '127.0.0.1',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-  tls: process.env.REDIS_TLS === 'true' ? {} : undefined, // For Upstash, set REDIS_TLS=true
-};
-
-const submissionQueue = new Queue('submissionQueue', {
-  connection: redisConnection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
-  },
+redisClient.on('error', (err) => {
+  console.error('Redis Client Error:', err);
 });
 
-// Use redis.set(), redis.get(), etc.
+redisClient.on('connect', () => {
+  console.log('Connected to Redis');
+});
 
-module.exports = submissionQueue;
+// Connect to Redis
+redisClient.connect().catch(console.error);
+
+// Create Bull queue using the Redis URL
+const submissionQueue = new Bull('submission processing', process.env.REDIS_URL, {
+  redis: {
+    tls: {
+      rejectUnauthorized: false
+    }
+  }
+});
+
+module.exports = { submissionQueue, redisClient };
