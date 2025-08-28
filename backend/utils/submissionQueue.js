@@ -1,7 +1,16 @@
-const Bull = require('bull');
+const { Queue, QueueScheduler } = require('bullmq');
+const IORedis = require('ioredis');
 
-// Create Bull queue using the single Redis URL from environment variables.
-// This is the only Redis client needed for the queue.
-const submissionQueue = new Bull('submissionQueue', process.env.REDIS_URL);
+const connection = new IORedis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASSWORD,
+  tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
 
-module.exports = { submissionQueue };
+const submissionQueue = new Queue('submissionQueue', { connection });
+new QueueScheduler('submissionQueue', { connection });
+
+module.exports = { submissionQueue, connection };

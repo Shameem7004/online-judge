@@ -1,19 +1,22 @@
 const { Worker } = require('bullmq');
-const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const axios = require('axios');
-
-// Load environment variables
 dotenv.config();
 
-// Import Mongoose models
+const { DBConnection } = require('./database/db');
 const Submission = require('./models/Submission');
 const Testcase = require('./models/Testcase');
-const Problem = require('./models/Problem');
 const User = require('./models/User');
+const axios = require('axios');
+const IORedis = require('ioredis');
 
-// Import DB connection function
-const { DBConnection } = require('./database/db');
+const connection = new IORedis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASSWORD,
+  tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
 
 // The main processing function for each job
 const processSubmission = async (job) => {
@@ -122,29 +125,18 @@ const processSubmission = async (job) => {
   }
 };
 
-// The main function to start the worker
-const startWorker = async () => {
-  await DBConnection(); // Connect to MongoDB
+// Start
+(async () => {
+  await DBConnection();
 
-  // This is correct and will now work because REDIS_URL is set in Render.
   const worker = new Worker('submissionQueue', processSubmission, {
-    connection: process.env.REDIS_URL,
+    connection,
     concurrency: 5,
-    limiter: {
-      max: 20,
-      duration: 1000,
-    },
+    limiter: { max: 20, duration: 1000 }
   });
 
-  worker.on('completed', (job) => {
-    console.log(`Job ${job.id} has completed!`);
-  });
+  worker.on('completed', (job) => console.log(`Job ${job.id} completed`));
+  worker.on('failed', (job, err) => console.error(`Job ${job?.id} failed: ${err.message}`));
 
-  worker.on('failed', (job, err) => {
-    console.error(`Job ${job.id} has failed with ${err.message}`);
-  });
-
-  console.log('Submission worker is ready and waiting for jobs...');
-};
-
-startWorker();
+  console.log('Worker started');
+})();
