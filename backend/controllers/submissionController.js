@@ -8,11 +8,9 @@ const initiateSubmission = async (req, res) => {
   try {
     const { problemId, code, language } = req.body;
     const userId = req.user._id;
-
     if (!problemId || !language || !code) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+      return res.status(400).json({ success:false, message:'Missing fields' });
     }
-
     const submission = await Submission.create({
       user: userId,
       problem: problemId,
@@ -21,17 +19,12 @@ const initiateSubmission = async (req, res) => {
       verdict: 'Pending',
       testCaseResults: []
     });
-
+    console.log('[QUEUE] Adding job for submission', submission._id.toString());
     await submissionQueue.add('processSubmission', { submissionId: submission._id.toString() });
-
-    return res.status(202).json({
-      success: true,
-      message: 'Submission received and queued.',
-      submissionId: submission._id
-    });
+    return res.status(202).json({ success:true, submissionId: submission._id });
   } catch (err) {
     console.error('Error initiating submission:', err);
-    return res.status(500).json({ success: false, message: 'Failed to initiate submission', error: err.message });
+    return res.status(500).json({ success:false, message:'Failed to initiate submission', error: err.message });
   }
 };
 
@@ -42,10 +35,14 @@ const streamSubmissionResults = async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // disable proxy buffering (Cloudflare still okay)
 
   // Critical for CORS - make sure these match your frontend
   res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:5173');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Flush headers immediately
+  res.flushHeaders && res.flushHeaders();
 
   // Keep connection alive with periodic comments
   const keepAliveInterval = setInterval(() => {

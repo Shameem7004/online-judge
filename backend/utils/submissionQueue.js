@@ -25,4 +25,7 @@ const submissionQueue = new Queue('submissionQueue', redisOptions);
 // Export the connection instance for the worker to use
 const connection = redisOptions.connection;
 
+submissionQueue.on('waiting', (jobId) => console.log('[QUEUE] Waiting job', jobId));
+submissionQueue.on('added', (job) => console.log('[QUEUE] Added job', job.id));
+
 module.exports = { submissionQueue, connection };

@@ -40,7 +40,10 @@ const processSubmission = async (job) => {
       };
 
       try {
+        // Change compilerUrl line if needed:
+        // const compilerUrl = `${process.env.COMPILER_URL}/run`;
         const compilerUrl = `${process.env.COMPILER_URL}/api/run`;
+        console.log('[WORKER] Calling compiler:', compilerUrl, 'lang=', submission.language);
         const { data } = await axios.post(compilerUrl, {
           code: submission.code,
           language: submission.language,
