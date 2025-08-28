@@ -15,14 +15,6 @@ const User = require('./models/User');
 // Import DB connection function
 const { DBConnection } = require('./database/db');
 
-// Redis connection configuration (must match the queue's config)
-const redisConnection = {
-  host: process.env.REDIS_HOST || '127.0.0.1',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-  tls: process.env.REDIS_TLS === 'true' ? {} : undefined
-};
-
 // The main processing function for each job
 const processSubmission = async (job) => {
   const { submissionId } = job.data;
@@ -134,12 +126,13 @@ const processSubmission = async (job) => {
 const startWorker = async () => {
   await DBConnection(); // Connect to MongoDB
 
+  // This is correct and will now work because REDIS_URL is set in Render.
   const worker = new Worker('submissionQueue', processSubmission, {
-    connection: redisConnection,
-    concurrency: 5, // Process up to 5 jobs at a time
+    connection: process.env.REDIS_URL,
+    concurrency: 5,
     limiter: {
-      max: 20, // Max 20 jobs
-      duration: 1000, // per 1 second
+      max: 20,
+      duration: 1000,
     },
   });
 
