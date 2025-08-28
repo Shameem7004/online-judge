@@ -1,4 +1,10 @@
+import { Redis } from '@upstash/redis';
 const { Queue } = require('bullmq');
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 const redisConnection = {
   host: process.env.REDIS_HOST || '127.0.0.1',
@@ -14,5 +20,7 @@ const submissionQueue = new Queue('submissionQueue', {
     backoff: { type: 'exponential', delay: 5000 },
   },
 });
+
+// Use redis.set(), redis.get(), etc.
 
 module.exports = submissionQueue;
