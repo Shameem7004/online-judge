@@ -6,7 +6,28 @@ const codeRoutes = require('./routes/codeRoutes');
 const app = express();
 
 dotenv.config();
-app.use(cors());
+
+const allowedOrigins = [
+  'https://www.codeversee.in',
+  'https://codeversee.in',
+  'https://algo-codeverse.vercel.app',
+  'http://localhost:5173'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Routes
