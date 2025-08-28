@@ -5,127 +5,113 @@ dotenv.config();
 const { DBConnection } = require('./database/db');
 const Submission = require('./models/Submission');
 const Testcase = require('./models/Testcase');
+const Problem = require('./models/Problem'); // FIX
 const User = require('./models/User');
 const axios = require('axios');
-const IORedis = require('ioredis');
+const { connection } = require('./utils/submissionQueue');
 
-const connection = new IORedis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-  tls: {} // Upstash uses TLS
-});
-
-// The main processing function for each job
 const processSubmission = async (job) => {
   const { submissionId } = job.data;
   console.log(`Processing submission: ${submissionId}`);
 
+  let finalResults = [];
+  let fatalVerdict = null; // Only set for Compilation / Runtime / TLE / Memory
   try {
-    // 1. Fetch submission details from the database
-    const submission = await Submission.findById(submissionId).populate('problem');
-    if (!submission) {
-      throw new Error('Submission not found');
-    }
+    const submission = await Submission.findById(submissionId);
+    if (!submission) throw new Error('Submission not found');
 
-    const problem = submission.problem;
-    const testcases = await Testcase.find({ problem: problem._id });
-    if (!testcases || testcases.length === 0) {
-        await Submission.findByIdAndUpdate(submissionId, { verdict: 'System Error', testCaseResults: [{ passed: false, userOutput: 'No test cases found for this problem.' }] });
-        throw new Error(`No test cases for problem ${problem._id}`);
-    }
+    submission.verdict = 'Pending';
+    await submission.save();
 
-    let finalVerdict = 'Accepted';
-    const finalResults = [];
+    const problem = await Problem.findById(submission.problem);
+    if (!problem) throw new Error('Problem not found');
 
-    // 2. Loop through each test case and execute
-    for (const testcase of testcases) {
-      let result = { 
-        passed: false, 
-        input: testcase.input, 
-        expectedOutput: testcase.output,
-        testCaseNumber: finalResults.length + 1
+    const testcases = await Testcase.find({ problem: problem._id }).sort({ createdAt: 1 });
+    if (testcases.length === 0) throw new Error('No testcases found');
+    console.log('Total testcases:', testcases.length);
+
+    for (const tc of testcases) {
+      const result = {
+        passed: false,
+        input: tc.input,
+        expectedOutput: tc.output,
+        userOutput: '',
+        executionTime: null
       };
 
       try {
-        // FIX: Update URL to match your compiler service route
-        const compilerResponse = await axios.post(`${process.env.COMPILER_URL}/api/run`, {
+        const compilerUrl = `${process.env.COMPILER_URL}/api/run`;
+        const { data } = await axios.post(compilerUrl, {
           code: submission.code,
           language: submission.language,
-          input: testcase.input
+          input: tc.input
         }, { timeout: 15000 });
 
-        const userOutput = compilerResponse.data.output?.trim() || '';
-        const expectedOutput = testcase.output?.trim() || '';
-        
-        result.userOutput = userOutput;
-        result.executionTime = compilerResponse.data.executionTime;
-        result.passed = userOutput === expectedOutput;
-
-        if (!result.passed) {
-          finalVerdict = 'Wrong Answer';
-        }
+        const userOut = (data.output || '').trim();
+        const expected = (tc.output || '').trim();
+        result.userOutput = userOut;
+        result.executionTime = data.executionTime;
+        result.passed = userOut === expected;
       } catch (err) {
-        result.passed = false;
         if (err.code === 'ECONNABORTED') {
-          finalVerdict = 'Time Limit Exceeded';
-          result.userOutput = 'Execution timed out.';
+          fatalVerdict = fatalVerdict || 'Time Limit Exceeded';
+          result.userOutput = 'TLE';
         } else if (err.response?.data?.errorType === 'compilation') {
-          finalVerdict = 'Compilation Error';
-          result.userOutput = err.response.data.error;
+          fatalVerdict = 'Compilation Error';
+          result.userOutput = 'Compilation Error';
         } else {
-          finalVerdict = 'Runtime Error';
+          fatalVerdict = fatalVerdict || 'Runtime Error';
           result.userOutput = err.response?.data?.error || err.message;
         }
       }
 
       finalResults.push(result);
 
-      // NEW: persist each test result immediately so SSE can stream it
       await Submission.findByIdAndUpdate(submissionId, {
-        $push: { testCaseResults: result }
+        $push: { testCaseResults: result },
+        verdict: fatalVerdict || 'Pending'
       });
 
-      // Stop on first non-accepted verdict and persist verdict now
-      if (finalVerdict !== 'Accepted') {
-        await Submission.findByIdAndUpdate(submissionId, { verdict: finalVerdict });
-        break;
+      if (fatalVerdict === 'Compilation Error') break; // only compilation stops early
+    }
+
+    // Recompute final verdict if no fatal verdict decided
+    let finalVerdict;
+    if (fatalVerdict) {
+      finalVerdict = fatalVerdict;
+    } else {
+      const allPassed = finalResults.length > 0 && finalResults.every(r => r.passed);
+      finalVerdict = allPassed ? 'Accepted' : 'Wrong Answer';
+    }
+
+    await Submission.findByIdAndUpdate(submissionId, {
+      verdict: finalVerdict
+    });
+
+    // Award points only if final verdict Accepted and first AC
+    if (finalVerdict === 'Accepted') {
+      const existingAC = await Submission.findOne({
+        user: submission.user,
+        problem: problem._id,
+        verdict: 'Accepted',
+        _id: { $ne: submissionId }
+      });
+      if (!existingAC) {
+        await User.findByIdAndUpdate(submission.user, { $inc: { totalPoints: problem.points || 0 } });
       }
     }
 
-    // 4. Finalize verdict (for full pass path)
-    await Submission.findByIdAndUpdate(submissionId, {
-      verdict: finalVerdict
-      // testCaseResults were already pushed incrementally
-    });
-
-    // 5. Update user points if accepted and first time solving
-    if (finalVerdict === 'Accepted') {
-        const alreadySolved = await Submission.findOne({ 
-            user: submission.user, 
-            problem: problem._id, 
-            verdict: 'Accepted', 
-            _id: { $ne: submissionId } 
-        });
-        if (!alreadySolved) {
-            await User.findByIdAndUpdate(submission.user, { $inc: { totalPoints: problem.points || 100 } });
-        }
-    }
-
-    console.log(`Finished processing submission ${submissionId} with verdict: ${finalVerdict}`);
-    return { success: true, verdict: finalVerdict };
-
+    console.log(`Finished submission ${submissionId} => ${finalVerdict}`);
+    return { verdict: finalVerdict };
   } catch (error) {
-    console.error(`Error processing job ${job.id} for submission ${submissionId}:`, error);
-    // Mark submission as failed in DB
-    await Submission.findByIdAndUpdate(submissionId, { verdict: 'System Error', testCaseResults: [{ passed: false, userOutput: error.message }] });
-    throw error; // Re-throw to let BullMQ handle the job failure and retries
+    console.error(`Submission ${submissionId} failed:`, error.message);
+    await Submission.findByIdAndUpdate(submissionId, { verdict: 'Runtime Error' });
+    throw error;
   }
 };
 
-// Start
 (async () => {
   await DBConnection();
-
   const worker = new Worker('submissionQueue', processSubmission, {
     connection,
     concurrency: 5,

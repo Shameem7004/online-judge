@@ -32,9 +32,13 @@ const SubmissionProgress = ({ progress, status, isJudging }) => {
     }
   };
 
+  const total = progress.results.length;
+  const passed = progress.results.filter(r => r.passed).length;
+  const showSummary = !isJudging && total > 0 && progress.verdict;
+
   return (
     <div className="p-4 h-full overflow-y-auto">
-      {/* Final Verdict Banner */}
+      {/* Verdict banner (kept) */}
       {!isJudging && progress.verdict && (
         <div className={`p-4 rounded-lg border mb-4 ${getVerdictStyles(progress.verdict)}`}>
           <h4 className="text-xl font-bold">
@@ -43,10 +47,19 @@ const SubmissionProgress = ({ progress, status, isJudging }) => {
         </div>
       )}
 
-      {/* Judging Status */}
+      {/* Summary after all processed */}
+      {showSummary && (
+        <div className="mb-4 text-sm font-medium text-slate-200">
+          {passed === total
+            ? `All test cases passed (${passed}/${total})`
+            : `${passed} out of ${total} test cases passed`}
+        </div>
+      )}
+
+      {/* Judging status (only while running) */}
       {isJudging && (
         <div className="mb-4 text-blue-300">
-          <p>{status || 'Initializing...'}</p>
+          <p>{status || 'Judging...'}</p>
         </div>
       )}
 
@@ -116,6 +129,7 @@ function ProblemDetailPage() {
   const [showAIModal, setShowAIModal] = useState(false);
   const [completedSubmissionId, setCompletedSubmissionId] = useState(null);
   const [isSubmissionJudged, setIsSubmissionJudged] = useState(false);
+  const [activeSubmissionId, setActiveSubmissionId] = useState(null);
 
   function getDeviceType() {
     const width = window.innerWidth;
@@ -268,99 +282,90 @@ function ProblemDetailPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!user) {
-      alert('Please log in to submit your code.');
-      navigate('/login');
-      return;
+  const openSubmissionStream = (id) => {
+    // Close any existing stream
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
     }
-    
-    if (deviceType === 'mobile') {
-      setMobileActiveTab('editor');
-    }
-    
-    setIsSubmissionJudged(false);
-    setCompletedSubmissionId(null);
-    
-    setIsJudging(true);
-    setIsExecuting(true);
-    setOutput(""); 
-    setRunError(null);
-    setSubmissionProgress({
-      results: [],
-      verdict: 'Judging...'
-    });
-    setJudgingStatus('Submitting...');
 
-    try {
+    const streamUrl = `${import.meta.env.VITE_API_URL}/submissions/stream/${id}`;
+    eventSourceRef.current = new EventSource(streamUrl, { withCredentials: true });
+
+    // Reset progress
+    setSubmissionProgress({ results: [], verdict: null });
+    setIsJudging(true);
+    setJudgingStatus('Judging...');
+
+    eventSourceRef.current.addEventListener('testcase', (e) => {
+      const data = JSON.parse(e.data);
+      setSubmissionProgress(prev => ({
+        ...(prev || { results: [], verdict: null }),
+        results: [...(prev?.results || []), data]
+      }));
+    });
+
+    eventSourceRef.current.addEventListener('verdict', (e) => {
+      const data = JSON.parse(e.data);
+      setSubmissionProgress(prev => ({
+        ...(prev || { results: [] }),
+        verdict: data.verdict,
+        summary: {
+          passed: data.passed,
+            total: data.total
+        }
+      }));
+      setIsJudging(false);
+      setJudgingStatus('');
+      // Close stream after final verdict
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    });
+
+    eventSourceRef.current.addEventListener('error', (e) => {
+      console.warn('SSE error:', e);
+      if (isJudging) {
+        setJudgingStatus('Stream error');
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e?.preventDefault?.();
+    if (!user) {
+      // optionally redirect to login
+      return;
+    }
+    try {
+      setIsJudging(true);
+      setJudgingStatus('Submitting...');
+      setSubmissionProgress(null);
+
+      const payload = {
+        problemId: problem?._id,
+        code,
+        language
+      };
+
+      const res = await initiateSubmission(payload);
+      const newSubmissionId = res?.data?.submissionId;
+      if (!newSubmissionId) {
+        throw new Error('Submission ID missing in response');
       }
 
-      const codeToSubmit = processJavaCode(code);
+      setActiveSubmissionId(newSubmissionId);
+      openSubmissionStream(newSubmissionId);
+      setJudgingStatus('Judging...');
 
-      const response = await initiateSubmission({
-        problemId: problem._id,
-        code: codeToSubmit,
-        language,
-      });
-
-      const submissionId = response.data.submissionId;
-      setCompletedSubmissionId(submissionId);
-      
-      const streamUrl = `${import.meta.env.VITE_API_URL}/submissions/stream/${submissionId}`;
-      const eventSource = new EventSource(streamUrl, { withCredentials: true });
-      eventSourceRef.current = eventSource;
-
-      eventSource.onopen = () => {
-        setJudgingStatus('Connected to judge...');
-      };
-
-      eventSource.addEventListener('progress', (event) => {
-        const data = JSON.parse(event.data);
-        setJudgingStatus(data.status || 'Processing...');
-      });
-
-      eventSource.addEventListener('testcase', (event) => {
-        const testCaseResult = JSON.parse(event.data);
-        setSubmissionProgress(prev => ({
-          ...prev,
-          results: [...prev.results, testCaseResult]
-        }));
-      });
-
-      eventSource.addEventListener('done', (event) => {
-        const finalData = JSON.parse(event.data);
-        setSubmissionProgress(prev => ({
-          ...prev,
-          verdict: finalData.verdict
-        }));
-        setIsJudging(false);
-        setIsExecuting(false);
-        setJudgingStatus('');
-        eventSource.close();
-        
-        setIsSubmissionJudged(true);
-      });
-
-      eventSource.onerror = (err) => {
-        console.error('EventSource error:', err);
-        if (submissionProgress?.results?.length > 0) {
-          const allPassed = submissionProgress.results.every(result => result.passed);
-          setSubmissionProgress(prev => ({ ...prev, verdict: allPassed ? 'Accepted' : 'Wrong Answer' }));
-        } else {
-          setJudgingStatus('Connection error - check submission history');
-        }
-        setIsJudging(false);
-        setIsExecuting(false);
-        eventSource.close();
-      };
-    } catch (error) {
-      console.error('Submission failed', error);
-      // FIX: Use setRunError for submission initiation errors.
-      setRunError(`Submission Failed:\n${error.response?.data?.message || error.message}`);
+    } catch (err) {
+      console.error('Submission failed', err);
       setIsJudging(false);
-      setIsExecuting(false);
+      setJudgingStatus('');
     }
   };
 

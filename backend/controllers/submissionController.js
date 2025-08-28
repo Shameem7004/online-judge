@@ -1,7 +1,7 @@
 const Submission = require('../models/Submission');
 const Problem = require('../models/Problem');
 const User = require('../models/User');
-const submissionQueue = require('../utils/submissionQueue');
+const { submissionQueue } = require('../utils/submissionQueue'); 
 
 // This function now creates a submission and adds a job to the queue.
 const initiateSubmission = async (req, res) => {
@@ -10,10 +10,9 @@ const initiateSubmission = async (req, res) => {
     const userId = req.user._id;
 
     if (!problemId || !language || !code) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // 1. Create the submission record in the database with a 'Pending' status.
     const submission = await Submission.create({
       user: userId,
       problem: problemId,
@@ -23,22 +22,16 @@ const initiateSubmission = async (req, res) => {
       testCaseResults: []
     });
 
-    // 2. Add a job to the queue.
-    // The job contains all the information our worker will need.
-    await submissionQueue.add('processSubmission', {
-        submissionId: submission._id.toString(),
-    });
+    await submissionQueue.add('processSubmission', { submissionId: submission._id.toString() });
 
-    // 3. Immediately respond to the user with the submission ID.
-    res.status(202).json({
-        success: true,
-        message: "Submission received and is being processed.",
-        submissionId: submission._id
+    return res.status(202).json({
+      success: true,
+      message: 'Submission received and queued.',
+      submissionId: submission._id
     });
-
   } catch (err) {
     console.error('Error initiating submission:', err);
-    res.status(500).json({ error: 'Failed to initiate submission' });
+    return res.status(500).json({ success: false, message: 'Failed to initiate submission', error: err.message });
   }
 };
 
@@ -64,39 +57,56 @@ const streamSubmissionResults = async (req, res) => {
   try {
     const pollInterval = setInterval(async () => {
       try {
-        const submission = await Submission.findById(id);
+        const submission = await Submission.findById(id).lean();
         if (!submission) {
-          clearInterval(pollInterval);
-          res.write(`event: error\ndata: ${JSON.stringify({ error: 'Submission not found' })}\n\n`);
-          return res.end();
+          res.write(`event: error\ndata: ${JSON.stringify({ message: 'Not found' })}\n\n`);
+          throw new Error('Submission not found');
         }
 
-        // Check if there are new test case results to send
-        if (submission.testCaseResults.length > sentTestCasesCount) {
-          const newResults = submission.testCaseResults.slice(sentTestCasesCount);
-          newResults.forEach(result => {
-            res.write(`event: testcase\ndata: ${JSON.stringify(result)}\n\n`);
-          });
-          sentTestCasesCount = submission.testCaseResults.length;
+        const currentCount = submission.testCaseResults.length;
+
+        // Send new test case results
+        if (currentCount > sentTestCasesCount) {
+          const newlyAdded = submission.testCaseResults.slice(sentTestCasesCount);
+            newlyAdded.forEach(r => {
+              res.write(`event: testcase\ndata: ${JSON.stringify(r)}\n\n`);
+            });
+            sentTestCasesCount = currentCount;
         }
 
-        // If the verdict is no longer 'Pending', the process is done.
-        if (submission.verdict !== 'Pending') {
-          clearInterval(pollInterval);
-          res.write(`event: done\ndata: ${JSON.stringify({
+        const terminal = [
+          'Accepted',
+          'Wrong Answer',
+          'Time Limit Exceeded',
+          'Runtime Error',
+          'Compilation Error',
+          'Memory Limit Exceeded'
+        ];
+
+        const isTerminal = terminal.includes(submission.verdict);
+        const done =
+          isTerminal &&
+          (
+            submission.verdict === 'Compilation Error' ||
+            currentCount === submission.testCaseResults.length
+          );
+
+        if (done) {
+          res.write(`event: verdict\ndata: ${JSON.stringify({
             verdict: submission.verdict,
-            testCaseResults: submission.testCaseResults
+            total: submission.testCaseResults.length,
+            passed: submission.testCaseResults.filter(r => r.passed).length
           })}\n\n`);
+          clearInterval(pollInterval);
+          clearInterval(keepAliveInterval);
           return res.end();
         }
-
-        // If still pending, send a general progress update
-        res.write(`event: progress\ndata: ${JSON.stringify({ status: 'Running test cases...' })}\n\n`);
-
-      } catch (error) {
+      } catch (e) {
+        console.error('SSE stream error:', e.message);
         clearInterval(pollInterval);
-        res.write(`event: error\ndata: ${JSON.stringify({ message: 'Error checking submission status' })}\n\n`);
-        res.end();
+        clearInterval(keepAliveInterval);
+        try { res.write(`event: error\ndata: ${JSON.stringify({ message: e.message })}\n\n`); } catch {}
+        return res.end();
       }
     }, 1000); // Poll every 1 second
 
@@ -181,10 +191,34 @@ const getMySubmissions = async (req, res) => {
   }
 };
 
+const submitCode = async (req, res) => {
+  try { // ADDED: try block
+    const { problemId, code, language } = req.body;
+    const userId = req.user.id;
+
+    const submission = await Submission.create({
+      problemId,
+      userId,
+      code,
+      language,
+      status: 'Pending',
+    });
+
+    await submissionQueue.add('processSubmission', { submissionId: submission._id });
+
+    res.status(201).json({ message: 'Submission received and queued!', submissionId: submission._id });
+
+  } catch (error) { // ADDED: catch block
+    console.error("Error in submitCode controller:", error);
+    res.status(500).json({ message: "Internal server error during submission.", error: error.message });
+  }
+};
+
 module.exports = { 
     initiateSubmission,
     streamSubmissionResults,
     getAllSubmissions,
     getSubmissionById,
-    getMySubmissions
+    getMySubmissions,
+    submitCode
 };
