@@ -9,13 +9,10 @@ const User = require('./models/User');
 const axios = require('axios');
 const IORedis = require('ioredis');
 
-const connection = new IORedis({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
-  password: process.env.REDIS_PASSWORD,
-  tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+const connection = new IORedis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  tls: {} // Upstash uses TLS
 });
 
 // The main processing function for each job

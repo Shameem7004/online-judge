@@ -1,16 +1,12 @@
-const { Queue, QueueScheduler } = require('bullmq');
+const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
 
-const connection = new IORedis({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
-  password: process.env.REDIS_PASSWORD,
-  tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+const connection = new IORedis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  tls: {} // Upstash uses TLS
 });
 
 const submissionQueue = new Queue('submissionQueue', { connection });
-new QueueScheduler('submissionQueue', { connection });
 
 module.exports = { submissionQueue, connection };
