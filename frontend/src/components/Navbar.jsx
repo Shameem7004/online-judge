@@ -70,12 +70,14 @@ function Navbar() {
     { path: '/problems', label: 'Problems' },
     { path: '/contests', label: 'Contests' },
     { path: '/leaderboard', label: 'Leaderboard' },
+    // FIX: Conditionally add the Admin Panel link to the main navbar
+    ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Admin Panel' }] : []),
   ];
 
   const userMenuItems = [
     { icon: FaUser, label: 'Profile', path: '/profile' },
     { icon: FaCode, label: 'My Submissions', path: '/submissions' },
-    ...(user?.role === 'admin' ? [{ icon: FaCog, label: 'Admin Panel', path: '/admin' }] : []),
+    // FIX: Remove the Admin Panel link from the dropdown menu
   ];
 
   return (
