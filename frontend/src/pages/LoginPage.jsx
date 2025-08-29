@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react'; // 1. Import useEffect
 import { useNavigate, Link } from 'react-router-dom'; 
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../api/userApi';
@@ -7,10 +7,19 @@ import '../index.css'; // Ensure styles are applied
 
 function LoginPage() {
   const { addNotification } = useNotification(); 
-  const { setUser } = useContext(AuthContext);
+  const { user, setUser } = useContext(AuthContext); // 2. Get the user object
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate(); 
+
+  // 3. Add this useEffect hook
+  useEffect(() => {
+    // This effect runs when the 'user' object changes.
+    // If the user is successfully set (i.e., not null), navigate to the homepage.
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]); // Dependencies: user and navigate
 
   const handleLogin = async (e) => {
     e.preventDefault(); 
@@ -25,10 +34,11 @@ function LoginPage() {
       const res = await loginUser(payload);
       console.log('Login successful:', res.data);
 
-      setUser(res.data.user);
       addNotification(`Welcome back, ${res.data.user.username}!`);
+      
+      // 4. This now ONLY sets the user state. The useEffect will handle navigation.
+      setUser(res.data.user);
 
-      navigate('/'); 
     } catch (error) {
       console.log('Login error:', error.response?.data || error.message);
       const message = error.response?.data?.message || 'Login failed';

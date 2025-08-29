@@ -58,6 +58,7 @@ const registerUser = async (req, res) => {
             lastname: user.lastname,
             email: user.email,
             username: user.username,
+            role: user.role, // <-- FIX: Add the role property
             createdAt: user.createdAt
         };
 
@@ -96,7 +97,6 @@ const registerUser = async (req, res) => {
 
 // Login Part
 const loginUser = async (req, res) => {
-    // ... (Your login code is excellent, no changes needed here)
     try{
         const { email, password, username } = req.body;
         
@@ -126,34 +126,15 @@ const loginUser = async (req, res) => {
             });
         }
         
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if(!isPasswordValid){
-            // PREVIOUSLY: return res.status(401).json({ success: false, message: 'Invalid credentials' })
-            // CHANGE: Provide a more specific error message for wrong passwords.
+        const isMatch = await bcrypt.compare(password, user.password);
+        if(!isMatch) {
             return res.status(401).json({
                 success: false,
-                message: 'Wrong password'
-            })
+                message: 'Invalid credentials'
+            });
         }
 
-        const token = jwt.sign(
-            {
-            id: user._id, 
-            email: user.email,
-            },
-            // CHANGE: Use the correct environment variable name from your .env file
-            process.env.JWT_SECRET_KEY,
-            {
-                expiresIn: '24h'
-            }
-        );
-
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Set to true in production
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site
-            maxAge: 3 * 24 * 60 * 60 * 1000 // 3 days
-        });
+        const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET_KEY, { expiresIn: '24h' });
 
         const userResponse = {
             id: user._id,
@@ -161,14 +142,19 @@ const loginUser = async (req, res) => {
             lastname: user.lastname,
             email: user.email,
             username: user.username,
+            role: user.role, // <-- FIX: Add the role property
+            createdAt: user.createdAt
         };
 
-        return res.status(200)
-        .json({
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }).status(200).json({
             success: true,
-            message: 'Login successful!',
-            user: userResponse,
-            token
+            message: 'Logged in successfully',
+            user: userResponse
         });
 
     } catch(error){
