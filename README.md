@@ -2,6 +2,19 @@
 
 A full‑stack online judge platform supporting problem solving, contests, AI code review (Gemini), daily challenges, secure queued judging, and a multi‑language Dockerized compiler microservice.
 
+🔗 Live Deployment: https://codeversee.in
+
+---
+
+## 🌐 Deployment
+
+Public URLs:
+- Frontend (App): https://codeversee.in
+- Backend API: https://api.codeversee.in
+- Compiler Service: https://compiler.codeversee.in
+
+(Ensure hosting env vars point frontend to API + compiler domains and CORS allows these origins.)
+
 ---
 
 ## ✨ Core Features
@@ -118,8 +131,7 @@ Online-Judge/
 │   ├── package.json
 │   └── .env (ignored)
 ├── .gitignore
-├── README.md
-└── (optional) docker-compose.yml
+└── README.md
 ```
 
 ---
@@ -317,17 +329,100 @@ docker run --rm -p 3000:3000 -v "$(pwd)/codes:/app/codes" codeverse-compiler
 
 ---
 
-## ⚠️ Action Required (Security)
+## 🏭 Production Deployment
 
-```bash
-# Remove leaked private key from history (after rotating it)
-git rm --cached compiler/keys/CodeVerse-Compiler-key.pem
-echo "compiler/keys/" >> .gitignore
-git commit -m "chore: remove leaked key"
-# Then rewrite history & force-push (filter-repo / BFG) if already pushed
+### 1. Build Artifacts
+Frontend:
+```
+cd frontend
+npm ci
+npm run build
+# Deploy dist/ to CDN (Vercel, Netlify, S3+CloudFront, etc.)
+```
+Backend / Worker:
+```
+cd backend
+npm ci
+npm run build   # (add a build step if needed)
 ```
 
-Rotate all exposed secrets (DB, JWT, Gemini, Redis, etc.).
+### 2. Docker Compose (example)
+```yaml
+version: "3.9"
+services:
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    ports: ["4000:4000"]
+    depends_on: [redis, mongo]
+  worker:
+    build: ./backend
+    command: node worker.js
+    env_file: ./backend/.env
+    depends_on: [redis, mongo]
+  compiler:
+    build: ./compiler
+    env_file: ./compiler/.env
+    ports: ["3000:3000"]
+    privileged: false
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  mongo:
+    image: mongo:6
+    volumes: [mongo-data:/data/db]
+volumes:
+  mongo-data:
+```
+
+### 3. Environment Differences
+| Variable | Dev | Prod Recommendation |
+|----------|-----|---------------------|
+| JWT_SECRET_KEY | simple | 32+ random chars |
+| CORS origins | localhost | Exact prod domains |
+| GEMINI_API_KEY | test key | Secret manager (AWS SSM / GCP Secret Manager) |
+| COMPILER_URL | local URL | Internal service DNS / cluster DNS |
+| Redis | local port | Managed Redis / password protected |
+| Mongo | local docker | Atlas / managed cluster (TLS) |
+
+### 4. CI/CD Checklist
+- Lint + type checks (eslint)
+- Unit/integration tests (add)
+- Build frontend + backend images
+- Run container security scan (Trivy / Grype)
+- Push images (tag with commit SHA)
+- Deploy via:
+  - Kubernetes (api, worker deployments + compiler)
+  - Or Docker Compose on VM
+  - Or separate PaaS (Render / Railway / Fly.io)
+
+### 5. Scaling Strategy
+| Component | Scale Method |
+|----------|--------------|
+| Worker | Increase replica count (parallel judging) |
+| Compiler | Horizontal pods (queue distributes load) |
+| API | Stateless horizontal scale + load balancer |
+| Mongo | Clustered / sharded if needed |
+| Redis | Use dedicated managed plan (I/O capacity) |
+
+### 6. Logging & Monitoring
+- Structured logs (JSON) → Loki / ELK
+- Metrics: request latency, queue depth, job duration
+- Alerts: high queue latency, error spikes, memory usage
+
+### 7. Security Hardening
+- Remove any private keys from history (filter-repo/BFG)
+- Force rotate all exposed secrets
+- Set HTTP security headers (helmet)
+- Enable TLS termination (proxy / CDN)
+- Fail2ban / WAF (if self-hosting)
+- Resource limits in Docker/K8s (CPU / memory)
+- Periodic dependency audit (npm audit / osv-scanner)
+
+### 8. Zero-Downtime Deploy (API)
+- Blue/Green or Rolling update
+- Keep schema migrations backward compatible
+- Queue draining strategy before redeploy worker
 
 ---
 
@@ -340,6 +435,14 @@ Add an OSS license (MIT recommended) if making public.
 ## 🙌 Contributions
 
 PRs and issues welcome (architecture, tests, sandbox hardening).
+
+---
+
+## 🔗 Links
+
+- Live App: https://codeversee.in
+- REST API: https://api.codeversee.in
+- Compiler Service: https://compiler.codeversee.in
 
 ---
 
