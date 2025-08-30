@@ -60,6 +60,8 @@ compiler/.env
 
 # Keys / certificates
 keys/
+compiler/keys/
+**/keys/
 *.pem
 *.key
 *.crt
