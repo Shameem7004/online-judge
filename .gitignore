@@ -1,79 +1,165 @@
-# Node.js dependencies
+# Node dependencies
+node_modules/
 backend/node_modules/
 frontend/node_modules/
 compiler/node_modules/
 
-# Build output
-frontend/dist/
-backend/dist/
-compiler/dist/
+# Package manager caches
+.pnpm-store/
+.yarn/
+.yarnrc.yml
 
-# Logs
+# Lockfiles you do NOT want to commit (uncomment the ones you truly want ignored)
+# If you rely on deterministic builds KEEP the lockfiles committed.
+# yarn.lock
+# pnpm-lock.yaml
+
+# Build / Dist Artifacts
+backend/dist/
+frontend/dist/
+compiler/dist/
+frontend/.next/
+frontend/.cache/
+frontend/.turbo/
+frontend/.vite/
+compiler/.vite/
+backend/.vite/
+**/.turbo/
+**/.parcel-cache/
+**/.eslintcache
+
+# Generated code / transient execution outputs
+compiler/codes/
+
+# Logs & Diagnostics
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log
+debug.log
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# Environment variables and secrets
+# Environment & Secrets
+# Root & all package envs
 *.env
+*.env.*          # e.g. .env.local, .env.production
+.env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+
+# Explicit service envs (defensive)
 backend/.env
 frontend/.env
 compiler/.env
 
-# Vite cache
-frontend/.vite/
-compiler/.vite/
-
-# VSCode settings
-.vscode/
-
-# Coverage reports
-coverage/
-*.lcov
-
-# Misc
-*.swp
-*.swo
-
-# Docker artifacts and temp files
-backend/docker/*.log
-backend/docker/tmp/
-compiler/codes/
-compiler/docker/*.log
-compiler/docker/tmp/
-
-# MongoDB data (if any local volume is used)
-mongo-data/
-
-# Frontend build artifacts
-frontend/.next/
-frontend/.cache/
-frontend/.turbo/
-
-# IDE files
-.idea/
-*.iml
-
-# Test output
-test-output/
-__pycache__/
-*.pyc
-
-# Static analysis
-.eslintcache
-
-# Other temp files
-tmp/
-temp/
-
-# Ignore keys directory and key files
+# Keys / certificates
 keys/
 *.pem
+*.key
+*.crt
+*.pfx
+
+# OS / Editor / IDE
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+.vscode/
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*.orig
+
+# JetBrains / VSCode workspace junk
+**/.history/
+.history/
+
+# Testing / Coverage
+coverage/
+*.lcov
+test-output/
+junit.xml
+
+# Temporary / Caches
+tmp/
+temp/
+**/tmp/
+**/temp/
+.cache/
+.cache-loader/
+.eslintcache
+.stylelintcache
+.nyc_output/
+.hg/
+.svn/
+
+# Runtime / Process
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency Analysis / Reports
+report-*.json
+
+# Docker / Container Related
+# Local docker logs & temp (already had some)
+backend/docker/*.log
+backend/docker/tmp/
+compiler/docker/*.log
+compiler/docker/tmp/
+docker-compose.override.yml
+
+# Avoid committing built images / export tars
+*.tar
+
+# Redis / Mongo / DB local volumes
+mongo-data/
+redis-data/
+
+# Frontend Specific
+# Misc generated assets
+frontend/.DS_Store
+
+# Vercel / Netlify / Deploy
+.vercel/
+.netlify/
+
+# Storybook (if added later)
+storybook-static/
+.out/
+
+# Misc
+*.bak
+*.tmp
+*.temp
+*.retry
+npm-packages-offline-cache/
+.yarn-integrity
+
+# Allowlist (NEGATION) examples (uncomment if needed)
+# Keep example env file
+!frontend/.env.example
+!backend/.env.example
+!compiler/.env.example
+
+# Keep README & config
+!**/README.md
+!docker-compose.yml
+!vite.config.js
+!frontend/vite.config.js
