@@ -2,50 +2,71 @@
 
 const User = require('../models/User');
 const Submission = require('../models/Submission');
+const Problem = require('../models/Problem');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// A helper function to create a consistent user response object
-const createUserResponse = (user) => {
+// A helper function to create a consistent user response object with real-time stats
+const createUserResponse = async (user) => {
     if (!user) return null;
-    return {
-        id: user._id,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        isFlagged: user.isFlagged, // FIX: Add isFlagged
-        flagReason: user.flagReason, // FIX: Add flagReason
-        createdAt: user.createdAt,
-    };
+
+    try {
+        // Calculate total points from unique accepted submissions
+        const acceptedSubmissions = await Submission.find({ 
+            user: user._id, 
+            verdict: 'Accepted' 
+        }).distinct('problem');
+        
+        const problems = await Problem.find({ _id: { $in: acceptedSubmissions } });
+        const totalPoints = problems.reduce((sum, problem) => sum + (problem.points || 0), 0);
+
+        // Update user's totalPoints in database for consistency
+        await User.findByIdAndUpdate(user._id, { totalPoints }, { new: true });
+
+        return {
+            id: user._id,
+            firstname: user.firstname,
+            lastname: user.lastname,
+            email: user.email,
+            username: user.username,
+            role: user.role,
+            isFlagged: user.isFlagged,
+            flagReason: user.flagReason,
+            createdAt: user.createdAt,
+            socialLinks: user.socialLinks,
+            totalPoints: totalPoints, // Real-time calculated points
+        };
+    } catch (error) {
+        console.error('Error calculating user stats:', error);
+        // Fallback to stored totalPoints if calculation fails
+        return {
+            id: user._id,
+            firstname: user.firstname,
+            lastname: user.lastname,
+            email: user.email,
+            username: user.username,
+            role: user.role,
+            isFlagged: user.isFlagged,
+            flagReason: user.flagReason,
+            createdAt: user.createdAt,
+            socialLinks: user.socialLinks,
+            totalPoints: user.totalPoints || 0,
+        };
+    }
 };
 
-// Resgisteration part
+// Registration part
 const registerUser = async (req, res) => {
-
     try{
         const { firstname, lastname, email, password, username } = req.body;
         if(!(firstname && lastname && email && password && username)) {
-            return res.status(400).json({
-                success: false,
-                message: 'All fields are required'
-            });
+            return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 
         const existingUser = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username }] });
         if(existingUser) {
-           return res.status(409).json({
-               success: false,
-               message: 'User with this email or username already exists'
-           });
+            return res.status(400).json({ success: false, message: 'User already exists' });
         }
-       
-       
-        //hashing the password in userSchema using pre-save hook, so that I can validate the password before saving it.
-        //Hash Password
-        // const saltRounds = 12;
-        // const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         const user = await User.create({
             firstname,
@@ -61,43 +82,18 @@ const registerUser = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000
         });
 
         return res.status(201).json({
             success: true,
             message: 'User registered successfully',
-            user: createUserResponse(user) // FIX: Use the helper function
+            user: await createUserResponse(user)
         });
 
     } catch(error){
         console.error('Registration error:', error);
-        
-        // FIX: Handle Mongoose validation errors to send specific messages
-        if (error.name === 'ValidationError') {
-            // Extract the first error message for simplicity
-            const messages = Object.values(error.errors).map(val => val.message);
-            const errorMessage = messages[0] || 'Validation failed. Please check your input.';
-            return res.status(400).json({
-                success: false,
-                message: errorMessage
-            });
-        }
-        
-        // FIX: Handle duplicate key errors (e.g., for unique username/email)
-        if (error.code === 11000) {
-            const field = Object.keys(error.keyValue)[0];
-            return res.status(409).json({ // 409 Conflict is more appropriate
-                success: false,
-                message: `An account with that ${field} already exists.`
-            });
-        }
-
-        // Generic server error
-        return res.status(500).json({
-            success: false,
-            message: 'Server error during registration.'
-        });
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 
@@ -131,7 +127,7 @@ const loginUser = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: 'Logged in successfully',
-            user: createUserResponse(user) // FIX: Use the helper function
+            user: await createUserResponse(user)
         });
 
     } catch(error){
@@ -142,10 +138,9 @@ const loginUser = async (req, res) => {
 
 // Logout part
 const logoutUser = (req, res) => {
-    // ... (Your logout code is perfect, no changes needed)
     res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Corrected '==' to '===' for strict equality
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
     });
     return res.status(200).json({
@@ -157,14 +152,13 @@ const logoutUser = (req, res) => {
 // to get info of logged in user.
 const getCurrentUser = async (req, res) => {
     try{
-        // The user object is already attached by the 'auth' middleware
         const user = req.user;
         if(!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         return res.status(200).json({
             success: true,
-            user: createUserResponse(user) // FIX: Use the helper function
+            user: await createUserResponse(user)
         });
     } catch(error){
         console.error('Get current user error:', error);
@@ -172,86 +166,91 @@ const getCurrentUser = async (req, res) => {
     }
 };
 
-
-// GET Leaderboard
+// GET Leaderboard - Updated to use the same calculation logic
 const getLeaderboard = async (req, res) => {
     try {
-        // FIX: Use an aggregation pipeline to calculate stats
         const leaderboard = await User.aggregate([
-            // Start with all users
-            { $match: {} },
-            // Get the number of contests each user has participated in
             {
                 $lookup: {
-                    from: 'contests',
+                    from: 'submissions',
                     localField: '_id',
-                    foreignField: 'participants',
-                    as: 'attendedContests'
+                    foreignField: 'user',
+                    as: 'userSubmissions'
                 }
             },
-            // Sort by totalPoints in descending order
-            { $sort: { totalPoints: -1 } },
-            // Limit to the top 100 users for performance
-            { $limit: 100 },
-            // Shape the final output
+            { $unwind: { path: '$userSubmissions', preserveNullAndEmptyArrays: true } },
+            { $match: { 'userSubmissions.verdict': 'Accepted' } },
             {
-                $project: {
-                    _id: 1,
-                    username: 1,
-                    totalPoints: 1,
-                    contestsAttended: { $size: '$attendedContests' } // Calculate the size of the array
+                $group: {
+                    _id: {
+                        userId: '$_id',
+                        problemId: '$userSubmissions.problem'
+                    },
+                    problem: { $first: '$userSubmissions.problem' },
+                    username: { $first: '$username' }
                 }
-            }
+            },
+            {
+                $lookup: {
+                    from: 'problems',
+                    localField: 'problem',
+                    foreignField: '_id',
+                    as: 'problemDetails'
+                }
+            },
+            { $unwind: '$problemDetails' },
+            {
+                $group: {
+                    _id: '$_id.userId',
+                    username: { $first: '$username' },
+                    score: { $sum: '$problemDetails.points' }
+                }
+            },
+            { $sort: { score: -1 } },
+            { $limit: 50 }
         ]);
 
-        res.status(200).json({ success: true, leaderboard });
+        res.status(200).json({
+            success: true,
+            leaderboard: leaderboard
+        });
     } catch (error) {
-        console.error('Error fetching leaderboard:', error);
+        console.error('Leaderboard error:', error);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
 
-// @desc    Register a new admin user
-// @route   POST /api/users/register-admin
-// @access  Private (requires secret key)
-const registerAdmin = async (req, res) => {
-    const { firstname, lastname, email, password, username, adminSecretKey } = req.body;
+// to update the user's profile
+const updateUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
 
-    // 1. Validate the secret key
-    if (adminSecretKey !== process.env.ADMIN_SECRET_KEY) {
-        return res.status(403).json({ message: 'Not authorized to create an admin.' });
-    }
+        if (user) {
+            user.firstname = req.body.firstname || user.firstname;
+            user.lastname = req.body.lastname || user.lastname;
+            
+            if (req.body.socialLinks) {
+                user.socialLinks = {
+                    github: req.body.socialLinks.github || '',
+                    linkedin: req.body.socialLinks.linkedin || '',
+                    leetcode: req.body.socialLinks.leetcode || '',
+                    codeforces: req.body.socialLinks.codeforces || '',
+                    codechef: req.body.socialLinks.codechef || '',
+                };
+            }
 
-    // 2. Check if user already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-        return res.status(400).json({ message: 'Admin with this email already exists.' });
-    }
-
-    // 3. Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // 4. Create user with 'admin' role
-    const user = await User.create({
-        firstname,
-        lastname,
-        email,
-        username,
-        password: hashedPassword,
-        role: 'admin' // Assign the admin role
-    });
-
-    if (user) {
-        res.status(201).json({
-            _id: user._id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            message: 'Admin user created successfully.'
-        });
-    } else {
-        res.status(400).json({ message: 'Invalid user data' });
+            const updatedUser = await user.save();
+            res.json({
+                success: true,
+                message: 'Profile updated successfully',
+                user: await createUserResponse(updatedUser)
+            });
+        } else {
+            res.status(404).json({ success: false, message: 'User not found' });
+        }
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 
@@ -260,66 +259,56 @@ const registerAdmin = async (req, res) => {
 // @access  Public
 const getUserProfile = async (req, res) => {
     try {
-        const user = await User.findOne({ username: req.params.username }).select('-password -email'); // Exclude sensitive fields
-
+        const { username } = req.params;
+        const user = await User.findOne({ username }).select('-password');
+        
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        // Fetch submission stats
-        const totalSubmissions = await Submission.countDocuments({ user: user._id });
-        const acceptedSubmissions = await Submission.countDocuments({ user: user._id, verdict: 'Accepted' });
-
-        // Find unique problems solved
-        const solvedProblems = await Submission.distinct('problem', { user: user._id, verdict: 'Accepted' });
-
-        res.status(200).json({
+        res.json({
             success: true,
-            user: {
-                _id: user._id,
-                username: user.username,
-                createdAt: user.createdAt,
-                stats: {
-                    totalSubmissions,
-                    acceptedSubmissions,
-                    problemsSolved: solvedProblems.length
-                }
-            }
+            user: await createUserResponse(user)
         });
-
     } catch (error) {
-        console.error('Error fetching user profile:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        console.error('Get user profile error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 
-// to update the user's profile
-const updateUserProfile = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        // We only allow updating these specific fields for security
-        const { firstname, lastname, bio, location, website, github, linkedin } = req.body;
+// @desc    Register a new admin user
+const registerAdmin = async (req, res) => {
+    const { firstname, lastname, email, password, username, adminSecretKey } = req.body;
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { firstname, lastname, bio, location, website, github, linkedin },
-            { new: true, runValidators: true } // Return the updated document and run schema validators
-        ).select('-password'); // Exclude the password from the returned object
+    if (adminSecretKey !== process.env.ADMIN_SECRET_KEY) {
+        return res.status(403).json({ success: false, message: 'Invalid admin secret key' });
+    }
 
-        if (!updatedUser) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+        return res.status(400).json({ success: false, message: 'User already exists' });
+    }
 
-        res.status(200).json({ success: true, user: updatedUser });
-    } catch (error) {
-        console.error("Update profile error:", error);
-        res.status(500).json({ success: false, message: 'Server error while updating profile' });
+    const user = await User.create({
+        firstname,
+        lastname,
+        email,
+        username,
+        password,
+        role: 'admin'
+    });
+
+    if (user) {
+        res.status(201).json({
+            success: true,
+            message: 'Admin user created successfully',
+            user: await createUserResponse(user)
+        });
+    } else {
+        res.status(400).json({ success: false, message: 'Invalid user data' });
     }
 };
 
-
-// REMOVE any getMySubmissions or getSubmissionsForUser logic from here
-// Only keep user-related logic
 module.exports = {
     registerUser,
     loginUser,

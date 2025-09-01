@@ -62,6 +62,13 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
         index: true
+    },
+    socialLinks: {
+        github: { type: String, trim: true, default: '' },
+        linkedin: { type: String, trim: true, default: '' },
+        leetcode: { type: String, trim: true, default: '' },
+        codeforces: { type: String, trim: true, default: '' },
+        codechef: { type: String, trim: true, default: '' },
     }
     }, {
         timestamps: true

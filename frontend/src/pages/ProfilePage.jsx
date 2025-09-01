@@ -1,86 +1,265 @@
-import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { updateUserProfile } from '../api/userApi';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { getMySubmissions } from '../api/submissionApi';
+import { updateUserProfile } from '../api/userApi';
+import { useNotification } from '../context/NotificationContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { FaUser, FaCode, FaTrophy, FaCalendarAlt, FaEdit, FaSave, FaTimes, FaGithub, FaLinkedin, FaGlobe, FaMapMarkerAlt } from 'react-icons/fa';
-import { toast } from 'react-toastify';
+import { FaCode, FaTrophy, FaCalendarAlt, FaGithub, FaLinkedin, FaEdit, FaSave, FaTimes, FaCheckCircle, FaTimesCircle, FaCamera } from 'react-icons/fa';
+import { SiLeetcode, SiCodeforces, SiCodechef } from 'react-icons/si';
+import { Link } from 'react-router-dom';
 
-// Enhanced Profile Stats Component
-const ProfileStats = ({ submissions }) => {
-  // Only accepted submissions
-  const acceptedSubs = submissions.filter(sub => sub.verdict === 'Accepted');
+// Social Links Display Component
+const SocialLinks = ({ links }) => {
+  const socialPlatforms = [
+    { key: 'github', icon: FaGithub, base_url: 'https://github.com/' },
+    { key: 'linkedin', icon: FaLinkedin, base_url: 'https://linkedin.com/in/' },
+    { key: 'leetcode', icon: SiLeetcode, base_url: 'https://leetcode.com/' },
+    { key: 'codeforces', icon: SiCodeforces, base_url: 'https://codeforces.com/profile/' },
+    { key: 'codechef', icon: SiCodechef, base_url: 'https://www.codechef.com/users/' },
+  ];
 
-  // Map to store first accepted submission per problem
-  const firstAcceptedMap = new Map();
-  acceptedSubs.forEach(sub => {
-    const problemId = sub.problem?._id || sub.problem;
-    // Only add if not already present (first accepted only)
-    if (!firstAcceptedMap.has(problemId)) {
-      firstAcceptedMap.set(problemId, sub);
-    }
+  if (!links || Object.values(links).every(link => !link)) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-4 mt-4">
+      {socialPlatforms.map(platform =>
+        links[platform.key] && (
+          <a
+            key={platform.key}
+            href={links[platform.key].startsWith('http') ? links[platform.key] : `${platform.base_url}${links[platform.key]}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-500 hover:text-indigo-600 transition-colors"
+            title={platform.key.charAt(0).toUpperCase() + platform.key.slice(1)}
+          >
+            <platform.icon className="w-6 h-6" />
+          </a>
+        )
+      )}
+    </div>
+  );
+};
+
+// Editable Profile Info Component
+const EditableProfileInfo = ({ user, onSave }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    firstname: user.firstname || '',
+    lastname: user.lastname || '',
+    socialLinks: {
+      github: user.socialLinks?.github || '',
+      linkedin: user.socialLinks?.linkedin || '',
+      leetcode: user.socialLinks?.leetcode || '',
+      codeforces: user.socialLinks?.codeforces || '',
+      codechef: user.socialLinks?.codechef || '',
+    },
   });
 
-  // Problems solved is the number of unique problems with accepted submission
-  const problemsSolved = firstAcceptedMap.size;
+  const handleSave = () => {
+    onSave(formData);
+    setIsEditing(false);
+  };
 
-  // Total points: sum points for first accepted submission per problem
-  const totalPoints = Array.from(firstAcceptedMap.values()).reduce(
-    (sum, sub) => sum + (sub.problem?.points || 0),
-    0
+  const handleCancel = () => {
+    setFormData({
+      firstname: user.firstname || '',
+      lastname: user.lastname || '',
+      socialLinks: user.socialLinks || {},
+    });
+    setIsEditing(false);
+  };
+
+  const socialInputs = [
+    { key: 'github', label: 'GitHub Username', icon: FaGithub },
+    { key: 'linkedin', label: 'LinkedIn Profile URL', icon: FaLinkedin },
+    { key: 'leetcode', label: 'LeetCode Username', icon: SiLeetcode },
+    { key: 'codeforces', label: 'Codeforces Handle', icon: SiCodeforces },
+    { key: 'codechef', label: 'CodeChef Username', icon: SiCodechef },
+  ];
+
+  if (isEditing) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Edit Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Dummy Image Upload Section */}
+          <div className="flex flex-col items-center pt-2 pb-6 border-b border-slate-200">
+            <div className="relative">
+              <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold mx-auto">
+                {formData.firstname?.charAt(0)}{formData.lastname?.charAt(0)}
+              </div>
+              <label htmlFor="profile-picture-upload" className="absolute -bottom-2 -right-2 bg-white p-2 rounded-full shadow-md cursor-pointer hover:bg-slate-100 transition-colors">
+                <FaCamera className="text-slate-600" />
+                <input id="profile-picture-upload" name="profile-picture-upload" type="file" className="sr-only" accept="image/*" />
+              </label>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+              <input type="text" value={formData.firstname} onChange={(e) => setFormData({ ...formData, firstname: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+              <input type="text" value={formData.lastname} onChange={(e) => setFormData({ ...formData, lastname: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900" />
+            </div>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold text-slate-800 mb-3">Social & Coding Profiles</h4>
+            <div className="space-y-4">
+              {socialInputs.map(input => (
+                <div key={input.key}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{input.label}</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <input.icon className="text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={input.key === 'linkedin' ? 'https://linkedin.com/in/...' : 'your-username'}
+                      value={formData.socialLinks[input.key] || ''}
+                      onChange={(e) => setFormData({ ...formData, socialLinks: { ...formData.socialLinks, [input.key]: e.target.value } })}
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md text-slate-900"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <Button variant="ghost" onClick={handleCancel}><FaTimes className="mr-2" />Cancel</Button>
+            <Button onClick={handleSave}><FaSave className="mr-2" />Save Changes</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-6 text-center">
+        <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4">
+          {user.firstname?.charAt(0)}{user.lastname?.charAt(0)}
+        </div>
+        <div className="flex items-center justify-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900">{user.firstname} {user.lastname}</h2>
+            {user.isFlagged && (
+                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
+                Flagged
+                </span>
+            )}
+        </div>
+        <p className="text-slate-600">@{user.username}</p>
+        <SocialLinks links={user.socialLinks} />
+        {!user.isFlagged && (
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="mt-6">
+            <FaEdit className="mr-2" /> Edit Profile
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
+};
 
-  // Contests attended: count unique contest IDs from accepted submissions
-  const contestsAttended = new Set(
-    Array.from(firstAcceptedMap.values())
-      .filter(sub => sub.contest)
-      .map(sub => sub.contest)
-  ).size;
+// Enhanced Profile Stats Component
+const ProfileStats = ({ user, submissions }) => {
+  // Calculate real-time statistics from submission data
+  const allSubmissions = submissions || [];
+  
+  // 1. Total Submissions (all submissions by the user)
+  const totalSubmissions = allSubmissions.length;
+  
+  // 2. Problems Attempted (unique problems with at least one submission)
+  const attemptedProblemsMap = new Map();
+  allSubmissions.forEach(sub => {
+    if (sub.problem?._id) {
+      attemptedProblemsMap.set(sub.problem._id, sub.problem);
+    }
+  });
+  const problemsAttempted = attemptedProblemsMap.size;
+
+  // 3. Problems Solved (unique problems with at least one accepted submission)
+  const acceptedSubmissions = allSubmissions.filter(sub => sub.verdict === 'Accepted');
+  const solvedProblemsMap = new Map();
+  acceptedSubmissions.forEach(sub => {
+    if (sub.problem?._id) {
+      solvedProblemsMap.set(sub.problem._id, sub.problem);
+    }
+  });
+  const problemsSolved = solvedProblemsMap.size;
+
+  // 4. Total Points (from backend user object - real-time calculated)
+  const totalPoints = user?.totalPoints || 0;
+
+  // 5. Contests Attended (unique contests from submissions)
+  const attendedContestIds = new Set();
+  allSubmissions.forEach(sub => {
+    if (sub.contest) {
+      attendedContestIds.add(sub.contest);
+    }
+  });
+  const contestsAttended = attendedContestIds.size;
 
   const stats = [
-    {
-      icon: FaCode,
-      label: 'Problems Solved',
-      value: problemsSolved,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
+    { 
+      icon: FaCode, 
+      label: 'Problems Solved', 
+      value: problemsSolved, 
+      color: 'text-green-600', 
+      bgColor: 'bg-green-100', 
+      link: '/profile/solved-problems',
+      subtitle: `${problemsAttempted} attempted`
     },
-    {
-      icon: FaTrophy,
-      label: 'Total Points',
-      value: totalPoints,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-100'
+    { 
+      icon: FaTrophy, 
+      label: 'Total Points', 
+      value: totalPoints, 
+      color: 'text-indigo-600', 
+      bgColor: 'bg-indigo-100', 
+      link: '/leaderboard' 
     },
-    {
-      icon: FaCalendarAlt,
-      label: 'Contests Attended',
-      value: contestsAttended,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
+    { 
+      icon: FaCalendarAlt, 
+      label: 'Contests Attended', 
+      value: contestsAttended, 
+      color: 'text-purple-600', 
+      bgColor: 'bg-purple-100', 
+      link: '/profile/contests' 
     },
-    {
-      icon: FaCode,
-      label: 'Total Submissions',
-      value: submissions.length,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
+    { 
+      icon: FaCode, 
+      label: 'Total Submissions', 
+      value: totalSubmissions, 
+      color: 'text-blue-600', 
+      bgColor: 'bg-blue-100', 
+      link: '/submissions',
+      subtitle: `${acceptedSubmissions.length} accepted`
     }
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
       {stats.map((stat, index) => (
-        <Card key={index} className="text-center hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center mx-auto mb-3`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-            <div className="text-sm text-gray-600">{stat.label}</div>
-          </CardContent>
-        </Card>
+        <Link to={stat.link} key={index} className="block hover:no-underline">
+          <Card className="text-center h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+            <CardContent className="p-6 flex flex-col items-center justify-center h-full">
+              <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center mx-auto mb-3`}>
+                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+              <div className="text-sm text-gray-600">{stat.label}</div>
+              {stat.subtitle && (
+                <div className="text-xs text-gray-500 mt-1">{stat.subtitle}</div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );
@@ -91,33 +270,31 @@ const ActivityHeatmap = ({ submissions }) => {
   const [heatmapData, setHeatmapData] = useState({});
 
   useEffect(() => {
-    if (submissions) {
-      const data = {};
-      submissions.forEach(submission => {
-        const date = new Date(submission.createdAt).toDateString();
-        data[date] = (data[date] || 0) + 1;
-      });
-      setHeatmapData(data);
-    }
+    const data = submissions.reduce((acc, sub) => {
+      const date = new Date(sub.createdAt).toISOString().split('T')[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {});
+    setHeatmapData(data);
   }, [submissions]);
 
   const getLastYear = () => {
     const dates = [];
     const today = new Date();
-    for (let i = 364; i >= 0; i--) {
+    for (let i = 0; i < 365; i++) {
       const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      dates.push(date);
+      date.setDate(today.getDate() - i);
+      dates.push(date.toISOString().split('T')[0]);
     }
-    return dates;
+    return dates.reverse();
   };
 
   const getIntensity = (count) => {
-    if (count === 0) return 'bg-gray-100';
-    if (count <= 2) return 'bg-green-200';
-    if (count <= 4) return 'bg-green-300';
-    if (count <= 6) return 'bg-green-400';
-    return 'bg-green-500';
+    if (count >= 10) return 'bg-indigo-700';
+    if (count >= 7) return 'bg-indigo-600';
+    if (count >= 4) return 'bg-indigo-500';
+    if (count >= 1) return 'bg-indigo-400';
+    return 'bg-slate-200';
   };
 
   const dates = getLastYear();
@@ -127,301 +304,58 @@ const ActivityHeatmap = ({ submissions }) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <FaCalendarAlt className="mr-2" />
-          Activity in the last year
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="grid grid-cols-53 gap-1">
-            {weeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="grid grid-rows-7 gap-1">
-                {week.map((date, dayIndex) => {
-                  const dateStr = date.toDateString();
-                  const count = heatmapData[dateStr] || 0;
-                  return (
-                    <div
-                      key={dayIndex}
-                      className={`w-3 h-3 rounded-sm ${getIntensity(count)} hover:ring-2 hover:ring-indigo-300 transition-all cursor-pointer`}
-                      title={`${date.toLocaleDateString()}: ${count} submissions`}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>Less</span>
-            <div className="flex space-x-1">
-              {['bg-gray-100', 'bg-green-200', 'bg-green-300', 'bg-green-400', 'bg-green-500'].map((color, i) => (
-                <div key={i} className={`w-3 h-3 rounded-sm ${color}`} />
-              ))}
-            </div>
-            <span>More</span>
-          </div>
+    <div className="flex gap-1 overflow-x-auto p-2">
+      {weeks.map((week, weekIndex) => (
+        <div key={weekIndex} className="flex flex-col gap-1">
+          {week.map(day => {
+            const count = heatmapData[day] || 0;
+            return (
+              <div
+                key={day}
+                className={`w-4 h-4 rounded-sm ${getIntensity(count)}`}
+                title={`${count} submissions on ${day}`}
+              />
+            );
+          })}
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   );
 };
 
 // Recent Activity Component
 const RecentActivity = ({ submissions }) => {
-  const recentSubmissions = submissions?.slice(0, 5) || [];
-  
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {recentSubmissions.length > 0 ? (
-          <div className="space-y-4">
-            {recentSubmissions.map((submission, index) => (
-              <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <div className={`w-3 h-3 rounded-full ${
-                  submission.verdict === 'Accepted' ? 'bg-green-500' :
-                  submission.verdict === 'Wrong Answer' ? 'bg-red-500' :
-                  'bg-yellow-500'
-                }`} />
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">{submission.problem?.name}</div>
-                  <div className="text-sm text-gray-600">
-                    {submission.verdict} • {new Date(submission.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <FaCode className="mx-auto h-8 w-8 mb-2" />
-            <p>No recent activity</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Editable Profile Info Component
-const EditableProfileInfo = ({ user, onSave }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstname: user.firstname || '',
-    lastname: user.lastname || '',
-    bio: user.bio || '',
-    location: user.location || '',
-    website: user.website || '',
-    github: user.github || '',
-    linkedin: user.linkedin || ''
-  });
-
-  const handleSave = async () => {
-    try {
-      await onSave(formData);
-      setIsEditing(false);
-      toast.success('Profile updated successfully!');
-    } catch (error) {
-      toast.error('Failed to update profile');
-    }
-  };
-
-  const handleCancel = () => {
-    setFormData({
-      firstname: user.firstname || '',
-      lastname: user.lastname || '',
-      bio: user.bio || '',
-      location: user.location || '',
-      website: user.website || '',
-      github: user.github || '',
-      linkedin: user.linkedin || ''
-    });
-    setIsEditing(false);
-  };
+  if (submissions.length === 0) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
+        <CardContent><p className="text-slate-500">No recent submissions.</p></CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center">
-            <FaUser className="mr-2" />
-            Profile Information
-          </CardTitle>
-          {!isEditing ? (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={user.isFlagged}>
-              <FaEdit className="mr-2" />
-              Edit Profile
-            </Button>
-          ) : (
-            <div className="flex space-x-2">
-              <Button size="sm" onClick={handleSave}>
-                <FaSave className="mr-2" />
-                Save
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleCancel}>
-                <FaTimes className="mr-2" />
-                Cancel
-              </Button>
-            </div>
-          )}
-        </div>
-      </CardHeader>
+      <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {/* Avatar and Basic Info */}
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              {user.firstname?.[0]?.toUpperCase() || user.username?.[0]?.toUpperCase()}
-            </div>
-            <div className="flex-1">
-              {isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="First Name"
-                    value={formData.firstname}
-                    onChange={(e) => setFormData({...formData, firstname: e.target.value})}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Last Name"
-                    value={formData.lastname}
-                    onChange={(e) => setFormData({...formData, lastname: e.target.value})}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-between flex-1">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-2xl font-bold text-gray-900">{user.firstname} {user.lastname}</h2>
-                      {/* FIX: Add the "Flagged" badge if the user is flagged */}
-                      {user.isFlagged && (
-                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
-                          Flagged
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-gray-600">{user.username}</p>
-                  </div>
-                  {/* FIX: Disable the edit button if the user is flagged */}
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={user.isFlagged}>
-                    Edit Profile
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-            {isEditing ? (
-              <textarea
-                placeholder="Tell us about yourself..."
-                value={formData.bio}
-                onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            ) : (
-              <p className="text-gray-700">{user.bio || 'No bio available'}</p>
-            )}
-          </div>
-
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-            {isEditing ? (
-              <input
-                type="text"
-                placeholder="Your location"
-                value={formData.location}
-                onChange={(e) => setFormData({...formData, location: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            ) : (
-              <div className="flex items-center text-gray-700">
-                <FaMapMarkerAlt className="mr-2 text-gray-400" />
-                {user.location || 'Location not specified'}
+        <ul className="space-y-4">
+          {submissions.map(sub => (
+            <li key={sub._id} className="flex items-center justify-between">
+              <div className="flex-1">
+                <Link to={`/problems/${sub.problem.slug}`} className="font-medium text-slate-800 hover:text-indigo-600 hover:underline">
+                  {sub.problem.name}
+                </Link>
+                <p className="text-sm text-slate-500">
+                  {new Date(sub.createdAt).toLocaleDateString()}
+                </p>
               </div>
-            )}
-          </div>
-
-          {/* Social Links */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-              {isEditing ? (
-                <input
-                  type="url"
-                  placeholder="https://yourwebsite.com"
-                  value={formData.website}
-                  onChange={(e) => setFormData({...formData, website: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              ) : (
-                user.website ? (
-                  <a href={user.website} target="_blank" rel="noopener noreferrer" className="flex items-center text-indigo-600 hover:text-indigo-800">
-                    <FaGlobe className="mr-2" />
-                    Website
-                  </a>
-                ) : (
-                  <span className="text-gray-500">No website</span>
-                )
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">GitHub</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  placeholder="github-username"
-                  value={formData.github}
-                  onChange={(e) => setFormData({...formData, github: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              ) : (
-                user.github ? (
-                  <a href={`https://github.com/${user.github}`} target="_blank" rel="noopener noreferrer" className="flex items-center text-indigo-600 hover:text-indigo-800">
-                    <FaGithub className="mr-2" />
-                    {user.github}
-                  </a>
-                ) : (
-                  <span className="text-gray-500">No GitHub</span>
-                )
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  placeholder="linkedin-username"
-                  value={formData.linkedin}
-                  onChange={(e) => setFormData({...formData, linkedin: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              ) : (
-                user.linkedin ? (
-                  <a href={`https://linkedin.com/in/${user.linkedin}`} target="_blank" rel="noopener noreferrer" className="flex items-center text-indigo-600 hover:text-indigo-800">
-                    <FaLinkedin className="mr-2" />
-                    {user.linkedin}
-                  </a>
-                ) : (
-                  <span className="text-gray-500">No LinkedIn</span>
-                )
-              )}
-            </div>
-          </div>
-        </div>
+              <span className={`flex items-center text-sm font-semibold ${sub.verdict === 'Accepted' ? 'text-green-600' : 'text-red-600'}`}>
+                {sub.verdict === 'Accepted' ? <FaCheckCircle className="mr-2" /> : <FaTimesCircle className="mr-2" />}
+                {sub.verdict}
+              </span>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );
@@ -429,110 +363,70 @@ const EditableProfileInfo = ({ user, onSave }) => {
 
 // Main Profile Component
 function ProfilePage() {
-  const { user, setUser } = useContext(AuthContext);
+  const { user, setUser } = useAuth();
+  const { addNotification } = useNotification();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchSubmissions = async () => {
+      if (!user) return;
       try {
-        setLoading(true);
-        // Fetch user submissions
-        const subRes = await getMySubmissions();
-        setSubmissions(subRes.data.submissions || []);
+        const res = await getMySubmissions();
+        
+        // FIX: Correctly process the API response and remove console logs
+        let flatSubmissions = [];
+        if (res.data.groupedSubmissions) {
+          // Handle the case where data is grouped by problem
+          flatSubmissions = res.data.groupedSubmissions.flatMap(group => group.submissions || []);
+        } else if (Array.isArray(res.data.submissions)) {
+          // Handle the case where data is a flat array in a 'submissions' property
+          flatSubmissions = res.data.submissions;
+        }
+        
+        setSubmissions(flatSubmissions);
       } catch (error) {
-        console.error('Failed to fetch user data:', error);
-        setSubmissions([]);
+        console.error("Failed to fetch submissions", error);
+        addNotification('Could not load submission history.', 'error');
       } finally {
         setLoading(false);
       }
     };
+    fetchSubmissions();
+  }, [user, addNotification]);
 
-    if (user) {
-      fetchUserData();
-    }
-  }, [user]);
-
-  const handleProfileUpdate = async (updatedData) => {
+  const handleSaveProfile = async (formData) => {
     try {
-      const res = await updateUserProfile(updatedData);
-      setUser({ ...user, ...res.data.user });
+      const res = await updateUserProfile(formData);
+      setUser(res.data.user);
+      addNotification('Profile updated successfully!', 'success');
     } catch (error) {
-      throw error;
+      addNotification(error.response?.data?.message || 'Failed to update profile.', 'error');
     }
   };
 
-  if (!user) {
-    return (
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="text-center py-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Please Log In</h2>
-          <p className="text-gray-600">You need to be logged in to view your profile.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="animate-pulse space-y-8">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="h-64 bg-gray-200 rounded"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
+  if (loading || !user) {
+    return <div className="text-center p-12">Loading profile...</div>;
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
-          My Submissions
-        </h1>
-        <p className="text-lg text-gray-600">
-          Your submission history, grouped by problem
-        </p>
-      </div>
-
-      {/* Profile Stats */}
-      <div className="mb-8">
-        <ProfileStats submissions={submissions} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left Column */}
-        <div className="space-y-8">
-          <EditableProfileInfo user={user} onSave={handleProfileUpdate} />
-          <RecentActivity submissions={submissions} />
+        <div className="lg:col-span-1 space-y-8">
+          <EditableProfileInfo user={user} onSave={handleSaveProfile} />
         </div>
 
         {/* Right Column */}
-        <div className="space-y-8">
-          <ActivityHeatmap submissions={submissions} />
-          
-          {/* Achievement Cards (Placeholder) */}
+        <div className="lg:col-span-2 space-y-8">
+          <ProfileStats user={user} submissions={submissions} />
+          <RecentActivity submissions={submissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5)} />
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <FaTrophy className="mr-2" />
-                Achievements
-              </CardTitle>
+              <CardTitle>Submission Activity (Last Year)</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <FaTrophy className="mx-auto h-8 w-8 mb-2" />
-                <p>Achievements coming soon!</p>
-              </div>
+              <ActivityHeatmap submissions={submissions} />
             </CardContent>
           </Card>
         </div>
