@@ -35,6 +35,10 @@ const submissionSchema = new mongoose.Schema({
         ],
         default: 'Pending'
     },
+    isFlagged: { // Add this field
+        type: Boolean,
+        default: false
+    },
     executionTime: {
         type: Number,
         min: 0

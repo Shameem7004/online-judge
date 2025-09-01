@@ -48,6 +48,11 @@ const userSchema = new mongoose.Schema({
         trim: true,
         index: true, // Index for faster queries
     },
+    isFlagged: { // Add this field
+        type: Boolean,
+        default: false,
+        index: true
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],

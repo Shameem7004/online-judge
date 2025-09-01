@@ -3,7 +3,11 @@ const router = express.Router();
 const {
     getDashboardStats,
     getAllUsers,
-    getAllSubmissions,
+    getSubmissionsGroupedByUser,
+    deleteUser,
+    toggleUserFlag,
+    deleteSubmission,
+    toggleSubmissionFlag,
 } = require('../controllers/adminController');
 
 // FIX: Import the single, reliable adminAuth middleware
@@ -14,7 +18,16 @@ router.use(adminAuth);
 
 // Define the specific routes
 router.get('/dashboard-stats', getDashboardStats);
+
+// User management
 router.get('/users', getAllUsers);
-router.get('/submissions', getAllSubmissions);
+router.delete('/users/:id', deleteUser);
+router.put('/users/:id/flag', toggleUserFlag);
+
+// Submission management
+router.get('/submissions/grouped', getSubmissionsGroupedByUser);
+router.delete('/submissions/:id', deleteSubmission);
+router.put('/submissions/:id/flag', toggleSubmissionFlag);
+
 
 module.exports = router;

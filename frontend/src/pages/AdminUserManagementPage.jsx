@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import { getAllUsers } from '../api/adminApi';
+import { getAllUsers, deleteUser, toggleUserFlag } from '../api/adminApi';
+import { FaFlag, FaTrash, FaCheck } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 
 const AdminUserManagementPage = () => {
   const [users, setUsers] = useState([]);
@@ -24,6 +26,28 @@ const AdminUserManagementPage = () => {
     fetchUsers();
     return () => controller.abort();
   }, []);
+
+  const handleToggleFlag = async (userId) => {
+    try {
+      const res = await toggleUserFlag(userId);
+      setUsers(users.map(u => u._id === userId ? { ...u, isFlagged: res.data.isFlagged } : u));
+      toast.success(`User ${res.data.isFlagged ? 'flagged' : 'unflagged'}.`);
+    } catch (err) {
+      toast.error('Failed to update user flag status.');
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      try {
+        await deleteUser(userId);
+        setUsers(users.filter(u => u._id !== userId));
+        toast.success('User deleted successfully.');
+      } catch (err) {
+        toast.error('Failed to delete user.');
+      }
+    }
+  };
 
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
@@ -59,11 +83,14 @@ const AdminUserManagementPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Joined On
                     </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
                   {users.map((user) => (
-                    <tr key={user._id} className="hover:bg-slate-50">
+                    <tr key={user._id} className={`hover:bg-slate-50 ${user.isFlagged ? 'bg-yellow-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                         {user.username}
                       </td>
@@ -83,6 +110,14 @@ const AdminUserManagementPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         {formatDate(user.createdAt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <button onClick={() => handleToggleFlag(user._id)} className={`p-2 rounded-full ${user.isFlagged ? 'bg-yellow-500 text-white' : 'bg-slate-200 text-slate-600'} hover:opacity-80`}>
+                          {user.isFlagged ? <FaCheck /> : <FaFlag />}
+                        </button>
+                        <button onClick={() => handleDeleteUser(user._id)} className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600">
+                          <FaTrash />
+                        </button>
                       </td>
                     </tr>
                   ))}
