@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { auth, limiter } = require('../middlewares/auth.js');
 const {
-    registerUser, loginUser, logoutUser, getCurrentUser, getLeaderboard, getUserProfile, updateUserProfile
+    registerUser, loginUser, logoutUser, getCurrentUser, getLeaderboard, getUserProfile, updateUserProfile, getSessionUser
 } = require('../controllers/userController.js');
 const { getSubmissionsForUser } = require('../controllers/submissionController.js'); 
 
@@ -12,6 +12,9 @@ router.post('/register', limiter, registerUser);
 
 router.post('/login', limiter, loginUser);
 router.post('/logout', logoutUser);
+
+// NEW public session route (always 200, user or null)
+router.get('/session', getSessionUser);
 
 // Protected routes
 router.get('/profile', auth, getCurrentUser);

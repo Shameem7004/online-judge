@@ -324,6 +324,29 @@ const registerAdmin = async (req, res) => {
     }
 };
 
+// ADD: public (no-error) session endpoint
+const getSessionUser = async (req, res) => {
+    try {
+        const token = req.cookies?.token;
+        if (!token) {
+            return res.status(200).json({ success: true, user: null });
+        }
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+            const user = await User.findById(decoded.id);
+            if (!user) {
+                return res.status(200).json({ success: true, user: null });
+            }
+            const shaped = await createUserResponse(user);
+            return res.status(200).json({ success: true, user: shaped });
+        } catch {
+            return res.status(200).json({ success: true, user: null });
+        }
+    } catch {
+        return res.status(200).json({ success: true, user: null });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
@@ -332,5 +355,6 @@ module.exports = {
     getLeaderboard,
     registerAdmin, 
     getUserProfile, 
-    updateUserProfile
+    updateUserProfile,
+    getSessionUser  // ADD
 };
