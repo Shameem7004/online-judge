@@ -63,9 +63,16 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 
-        const existingUser = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username }] });
-        if(existingUser) {
-            return res.status(400).json({ success: false, message: 'User already exists' });
+        // FIX: Check for existing email first
+        const existingEmail = await User.findOne({ email: email.toLowerCase() });
+        if(existingEmail) {
+            return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
+        }
+
+        // FIX: Then check for existing username
+        const existingUsername = await User.findOne({ username });
+        if(existingUsername) {
+            return res.status(400).json({ success: false, message: 'This username is already taken.' });
         }
 
         const user = await User.create({
@@ -92,8 +99,13 @@ const registerUser = async (req, res) => {
         });
 
     } catch(error){
+        // FIX: Handle Mongoose validation errors for specific feedback (e.g., password complexity)
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ success: false, message: messages.join(' ') });
+        }
         console.error('Registration error:', error);
-        return res.status(500).json({ success: false, message: 'Server error' });
+        return res.status(500).json({ success: false, message: 'Server error during registration' });
     }
 };
 
@@ -107,12 +119,14 @@ const loginUser = async (req, res) => {
 
         const user = await User.findOne({ $or: [{ email }, { username }] });
         if(!user) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            // FIX: Provide specific error for non-existent user
+            return res.status(404).json({ success: false, message: 'User does not exist' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if(!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            // FIX: Provide specific error for incorrect password
+            return res.status(401).json({ success: false, message: 'Incorrect password' });
         }
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '24h' });
