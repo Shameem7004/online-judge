@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { getAllUsers, deleteUser, toggleUserFlag } from '../api/adminApi';
 import { FaFlag, FaTrash, FaCheck } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import FilterControls from '../components/FilterControls'; // Import the new component
 
 const AdminUserManagementPage = () => {
   const [users, setUsers] = useState([]);
@@ -11,6 +12,10 @@ const AdminUserManagementPage = () => {
   const [error, setError] = useState('');
   const location = useLocation();
   const isViewOnly = new URLSearchParams(location.search).get('view') === 'true';
+
+  // State for filters and search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({ role: '', isFlagged: '' });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -29,6 +34,11 @@ const AdminUserManagementPage = () => {
     fetchUsers();
     return () => controller.abort();
   }, []);
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilters({ role: '', isFlagged: '' });
+  };
 
   const handleToggleFlag = async (userId) => {
     try {
@@ -54,6 +64,26 @@ const AdminUserManagementPage = () => {
 
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
+  // Memoized filtering logic
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const searchMatch = searchTerm === '' ||
+        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const roleMatch = filters.role === '' || user.role === filters.role;
+      
+      const flagMatch = filters.isFlagged === '' || String(user.isFlagged) === filters.isFlagged;
+
+      return searchMatch && roleMatch && flagMatch;
+    });
+  }, [users, searchTerm, filters]);
+
+  const filterOptions = [
+    { key: 'role', label: 'Filter by Role', options: [{ value: 'admin', label: 'Admin' }, { value: 'user', label: 'User' }] },
+    { key: 'isFlagged', label: 'Filter by Status', options: [{ value: 'true', label: 'Flagged' }, { value: 'false', label: 'Not Flagged' }] }
+  ];
+
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="mb-8">
@@ -62,11 +92,23 @@ const AdminUserManagementPage = () => {
           View and manage all registered users on the platform.
         </p>
       </div>
+      {!isViewOnly && (
+        <FilterControls
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filters={filters}
+          onFilterChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
+          onClear={handleClearFilters}
+          filterOptions={filterOptions}
+          placeholder="Search by username or email..."
+        />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>All Users ({users.length})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {loading && <p>Loading users...</p>}
           {error && <p className="text-red-500">{error}</p>}
           {!loading && !error && (
@@ -94,7 +136,7 @@ const AdminUserManagementPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user._id} className={`hover:bg-slate-50 ${user.isFlagged ? 'bg-yellow-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                         {user.username}

@@ -1,16 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getAllProblems, deleteProblem } from '../api/problemApi';
 import { Card, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
+import Button from '../components/ui/Button'; // FIX: Changed to default import
+import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import FilterControls from '../components/FilterControls'; // Import the new component
 
 const AdminProblemManagementPage = () => {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const isViewOnly = new URLSearchParams(location.search).get('view') === 'true';
+
+  // State for filters and search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({ difficulty: '' });
 
   useEffect(() => {
     const fetchProblems = async () => {
@@ -26,6 +31,11 @@ const AdminProblemManagementPage = () => {
     fetchProblems();
   }, []);
 
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilters({ difficulty: '' });
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this problem?')) {
       try {
@@ -37,6 +47,23 @@ const AdminProblemManagementPage = () => {
       }
     }
   };
+
+  // Memoized filtering logic
+  const filteredProblems = useMemo(() => {
+    return problems.filter(problem => {
+      const searchMatch = searchTerm === '' ||
+        problem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        problem._id.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const difficultyMatch = filters.difficulty === '' || problem.difficulty === filters.difficulty;
+
+      return searchMatch && difficultyMatch;
+    });
+  }, [problems, searchTerm, filters]);
+
+  const filterOptions = [
+    { key: 'difficulty', label: 'Filter by Difficulty', options: [{ value: 'Easy', label: 'Easy' }, { value: 'Medium', label: 'Medium' }, { value: 'Hard', label: 'Hard' }] }
+  ];
 
   if (loading) return <div>Loading problems...</div>;
 
@@ -58,6 +85,18 @@ const AdminProblemManagementPage = () => {
         )}
       </div>
 
+      {!isViewOnly && (
+        <FilterControls
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filters={filters}
+          onFilterChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
+          onClear={handleClearFilters}
+          filterOptions={filterOptions}
+          placeholder="Search by name or ID..."
+        />
+      )}
+
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -73,7 +112,7 @@ const AdminProblemManagementPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {problems.map(problem => (
+                {filteredProblems.map(problem => (
                   <tr key={problem._id} className="hover:bg-gray-50">
                     <td className="p-2 whitespace-nowrap font-medium text-gray-800">
                       <div>{problem.name}</div>

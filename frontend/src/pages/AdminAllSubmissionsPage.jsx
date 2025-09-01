@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { getGroupedSubmissions, deleteSubmission, toggleSubmissionFlag } from '../api/adminApi';
 import { FaFlag, FaTrash, FaCheck, FaUser } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import FilterControls from '../components/FilterControls'; // Import the new component
 
 const AdminAllSubmissionsPage = () => {
   const [groupedData, setGroupedData] = useState([]);
@@ -11,6 +12,10 @@ const AdminAllSubmissionsPage = () => {
   const [error, setError] = useState('');
   const location = useLocation();
   const isViewOnly = new URLSearchParams(location.search).get('view') === 'true';
+
+  // State for filters and search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({ verdict: '', language: '' });
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -25,6 +30,11 @@ const AdminAllSubmissionsPage = () => {
     };
     fetchSubmissions();
   }, []);
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilters({ verdict: '', language: '' });
+  };
 
   const handleToggleFlag = async (submissionId) => {
     try {
@@ -60,6 +70,46 @@ const AdminAllSubmissionsPage = () => {
 
   const formatDate = (dateString) => new Date(dateString).toLocaleString();
 
+  // Memoized filtering logic for submissions
+  const filteredGroupedData = useMemo(() => {
+    if (!groupedData) return [];
+
+    const lowerCaseSearch = searchTerm.toLowerCase();
+
+    return groupedData.map(group => {
+      // First, filter the submissions within the group
+      const filteredSubmissions = group.submissions.filter(sub => {
+        const verdictMatch = filters.verdict === '' || sub.verdict === filters.verdict;
+        const langMatch = filters.language === '' || sub.language === filters.language;
+        return verdictMatch && langMatch;
+      });
+
+      // If no submissions remain after filtering, this group is out
+      if (filteredSubmissions.length === 0) {
+        return null;
+      }
+
+      // Then, check if the group itself matches the search term
+      const userMatch = group.user.username.toLowerCase().includes(lowerCaseSearch);
+      const problemMatch = filteredSubmissions.some(sub => 
+        sub.problem?.name.toLowerCase().includes(lowerCaseSearch) ||
+        sub.problem?._id.toLowerCase().includes(lowerCaseSearch)
+      );
+
+      if (searchTerm === '' || userMatch || problemMatch) {
+        return { ...group, submissions: filteredSubmissions };
+      }
+
+      return null;
+    }).filter(Boolean); // Remove null groups
+
+  }, [groupedData, searchTerm, filters]);
+
+  const filterOptions = [
+    { key: 'verdict', label: 'Filter by Verdict', options: [{ value: 'Accepted', label: 'Accepted' }, { value: 'Wrong Answer', label: 'Wrong Answer' }, { value: 'Time Limit Exceeded', label: 'TLE' }, { value: 'Runtime Error', label: 'Runtime Error' }, { value: 'Compilation Error', label: 'Compilation Error' }] },
+    { key: 'language', label: 'Filter by Language', options: [{ value: 'cpp', label: 'C++' }, { value: 'java', label: 'Java' }, { value: 'python', label: 'Python' }, { value: 'javascript', label: 'JavaScript' }] }
+  ];
+
   if (loading) return <p>Loading submissions...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
@@ -71,8 +121,20 @@ const AdminAllSubmissionsPage = () => {
           Review and manage all submissions from all users.
         </p>
       </div>
+      {!isViewOnly && (
+        <FilterControls
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filters={filters}
+          onFilterChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
+          onClear={handleClearFilters}
+          filterOptions={filterOptions}
+          placeholder="Search by user, problem name, or ID..."
+        />
+      )}
+
       <div className="space-y-6">
-        {groupedData.map(({ user, submissions }) => (
+        {filteredGroupedData.map(({ user, submissions }) => (
           <Card key={user._id}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
