@@ -63,16 +63,17 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 
-        // FIX: Check for existing email first
-        const existingEmail = await User.findOne({ email: email.toLowerCase() });
-        if(existingEmail) {
-            return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
-        }
+        // FIX: Combine email and username check into one query
+        const existingUser = await User.findOne({ 
+            $or: [
+                { email: email.toLowerCase() }, 
+                { username }
+            ] 
+        });
 
-        // FIX: Then check for existing username
-        const existingUsername = await User.findOne({ username });
-        if(existingUsername) {
-            return res.status(400).json({ success: false, message: 'This username is already taken.' });
+        if(existingUser) {
+            // FIX: Return a single, combined error message
+            return res.status(400).json({ success: false, message: 'An account with this email or username already exists.' });
         }
 
         const user = await User.create({
