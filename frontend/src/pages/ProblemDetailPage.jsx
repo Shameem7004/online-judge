@@ -97,6 +97,11 @@ const styles = `
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  /* FIX: Add a pop-in animation for the AI button */
+  @keyframes popIn {
+    0% { opacity: 0; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+  }
 `;
 
 function ProblemDetailPage() {
@@ -127,8 +132,8 @@ function ProblemDetailPage() {
   const [mobileActiveTab, setMobileActiveTab] = useState('problem');
 
   const [showAIModal, setShowAIModal] = useState(false);
+  // FIX: This state will now hold the ID of the successfully completed submission.
   const [completedSubmissionId, setCompletedSubmissionId] = useState(null);
-  const [isSubmissionJudged, setIsSubmissionJudged] = useState(false);
   const [activeSubmissionId, setActiveSubmissionId] = useState(null);
 
   function getDeviceType() {
@@ -138,10 +143,10 @@ function ProblemDetailPage() {
     return 'desktop';
   }
 
-  // Reset AI button when code or language changes
+  // FIX: Reset AI button and submission progress when code or language changes
   useEffect(() => {
-    setIsSubmissionJudged(false);
     setCompletedSubmissionId(null);
+    setSubmissionProgress(null);
   }, [code, language]);
 
   useEffect(() => {
@@ -316,6 +321,12 @@ function ProblemDetailPage() {
       }));
       setIsJudging(false);
       setJudgingStatus('');
+      
+      // FIX: If the submission is accepted, store its ID to show the AI button.
+      if (data.verdict === 'Accepted') {
+        setCompletedSubmissionId(id);
+      }
+
       // Close stream after final verdict
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
@@ -342,6 +353,8 @@ function ProblemDetailPage() {
       return;
     }
     try {
+      // FIX: Reset the completed submission ID on a new submission attempt.
+      setCompletedSubmissionId(null);
       setIsJudging(true);
       setJudgingStatus('Submitting...');
       setSubmissionProgress(null);
@@ -484,11 +497,14 @@ function ProblemDetailPage() {
                   </select>
                 </div>
                 <div className="space-x-2 flex items-center">
-                  {isSubmissionJudged && (
+                  {/* FIX: Moved AI button to the left of Run */}
+                  {completedSubmissionId && (
                     <button
                       onClick={() => setShowAIModal(true)}
-                      className="bg-indigo-600 text-white px-3 py-1 rounded text-sm cursor-pointer hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+                      style={{ animation: 'popIn 0.3s ease-out' }}
+                      className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-1 rounded text-sm cursor-pointer hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 flex items-center gap-1.5"
                     >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
                       AI
                     </button>
                   )}
@@ -666,12 +682,15 @@ function ProblemDetailPage() {
                   </select>
                 </div>
                 <div className="space-x-2 flex items-center">
-                  {isSubmissionJudged && (
+                  {/* FIX: Moved AI button to the left of Run */}
+                  {completedSubmissionId && (
                     <button
                       onClick={() => setShowAIModal(true)}
-                      className="bg-indigo-600 text-white px-3 py-2 rounded cursor-pointer hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+                      style={{ animation: 'popIn 0.3s ease-out' }}
+                      className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-2 rounded cursor-pointer hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 flex items-center gap-2"
                     >
-                      AI Feedback
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                      AI Review
                     </button>
                   )}
                   <button
@@ -825,7 +844,7 @@ function ProblemDetailPage() {
                   id="language-select-desktop"
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="border border-slate-300 rounded px-3 py-1 text-slate-900"
+                  className="border border-slate-300 rounded px-4 py-2 text-slate-900"
                   disabled={isExecuting}
                 >
                   <option value="cpp">C++</option>
@@ -836,11 +855,14 @@ function ProblemDetailPage() {
                 </select>
               </div>
               <div className="space-x-2 flex items-center">
-                {isSubmissionJudged && (
+                {/* FIX: Moved AI button to the left of Run */}
+                {completedSubmissionId && (
                   <button
                     onClick={() => setShowAIModal(true)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+                    style={{ animation: 'popIn 0.3s ease-out' }}
+                    className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded cursor-pointer hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 flex items-center gap-2"
                   >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
                     AI Feedback
                   </button>
                 )}
