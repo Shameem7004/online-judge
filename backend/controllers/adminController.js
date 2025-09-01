@@ -63,11 +63,36 @@ const getSubmissionsGroupedByUser = asyncHandler(async (req, res) => {
             }
         },
         {
+            $lookup: {
+                from: "problems",
+                localField: "submissions.problem",
+                foreignField: "_id",
+                as: "problemDetails"
+            }
+        },
+        {
             $project: {
-                user: { $first: "$userDetails" },
-                submissions: "$submissions",
+                user: { $arrayElemAt: ["$userDetails", 0] },
                 submissionCount: 1,
-                _id: 0
+                submissions: {
+                    $map: {
+                        input: "$submissions",
+                        as: "sub",
+                        in: {
+                            _id: "$$sub._id",
+                            verdict: "$$sub.verdict",
+                            language: "$$sub.language",
+                            createdAt: "$$sub.createdAt",
+                            isFlagged: "$$sub.isFlagged",
+                            problem: {
+                                $arrayElemAt: [
+                                    { $filter: { input: "$problemDetails", as: "prob", cond: { $eq: ["$$prob._id", "$$sub.problem"] } } },
+                                    0
+                                ]
+                            }
+                        }
+                    }
+                }
             }
         },
         { $sort: { "user.createdAt": -1 } }
@@ -132,7 +157,7 @@ const toggleSubmissionFlag = asyncHandler(async (req, res) => {
         await submission.save();
         res.json({ success: true, isFlagged: submission.isFlagged });
     } else {
-        res.status(4404);
+        res.status(404);
         throw new Error('Submission not found');
     }
 });

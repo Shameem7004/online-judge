@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { getAllContests, deleteContest } from '../api/contestApi';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaUsers, FaClock } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -10,6 +10,8 @@ const AdminContestManagementPage = () => {
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const location = useLocation();
+  const isViewOnly = new URLSearchParams(location.search).get('view') === 'true';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -99,9 +101,11 @@ const AdminContestManagementPage = () => {
           <h1 className="text-3xl font-bold text-slate-900">Contest Management</h1>
           <p className="text-lg text-slate-600 mt-2">Manage and monitor all contests</p>
         </div>
-        <Link to="/admin/create-contest">
-          <Button><FaPlus className="mr-2" /> Create Contest</Button>
-        </Link>
+        {!isViewOnly && (
+          <Link to="/admin/create-contest">
+            <Button><FaPlus className="mr-2" /> Create Contest</Button>
+          </Link>
+        )}
       </div>
 
       {contests.length === 0 ? (
@@ -118,22 +122,22 @@ const AdminContestManagementPage = () => {
             const statusInfo = getContestStatus(contest);
             return (
               <Card key={contest._id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold text-slate-900">{contest.title}</h3>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>{statusInfo.text}</span>
-                      </div>
-                      <p className="text-slate-600 mb-4 line-clamp-2">{contest.description}</p>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <Link to={`/contests/${contest._id}`}><Button variant="outline" size="sm"><FaEye className="mr-1" /> View</Button></Link>
-                      <Link to={`/admin/edit-contest/${contest._id}`}><Button variant="outline" size="sm"><FaEdit className="mr-1" /> Edit</Button></Link>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteContest(contest._id)}><FaTrash className="mr-1" /> Delete</Button>
-                    </div>
+                <div className="flex justify-between items-start p-6">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl font-bold text-slate-800">{contest.title}</h3>
+                    <p className="text-sm text-slate-500 mt-1">{formatDate(contest.startTime)} - {formatDate(contest.endTime)}</p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                  {!isViewOnly && (
+                    <div className="flex items-center gap-2">
+                      <Link to={`/admin/edit-contest/${contest._id}`}>
+                        <Button variant="outline" size="sm"><FaEdit /></Button>
+                      </Link>
+                      <Button variant="danger" size="sm" onClick={() => handleDeleteContest(contest._id)}><FaTrash /></Button>
+                    </div>
+                  )}
+                </div>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="flex items-center text-slate-600"><FaClock className="mr-2" /><div><div className="font-medium">Start Time</div><div>{formatDate(contest.startTime)}</div></div></div>
                     <div className="flex items-center text-slate-600"><FaClock className="mr-2" /><div><div className="font-medium">Duration</div><div>{calculateDuration(contest.startTime, contest.endTime)}</div></div></div>
                     <div className="flex items-center text-slate-600"><FaUsers className="mr-2" /><div><div className="font-medium">Participants</div><div>{contest.participants?.length || 0}</div></div></div>

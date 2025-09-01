@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { getGroupedSubmissions, deleteSubmission, toggleSubmissionFlag } from '../api/adminApi';
 import { FaFlag, FaTrash, FaCheck, FaUser } from 'react-icons/fa';
@@ -9,6 +9,8 @@ const AdminAllSubmissionsPage = () => {
   const [groupedData, setGroupedData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const location = useLocation();
+  const isViewOnly = new URLSearchParams(location.search).get('view') === 'true';
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -85,24 +87,31 @@ const AdminAllSubmissionsPage = () => {
                       <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Problem</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Verdict</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
+                      {!isViewOnly && (
+                        <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
                     {submissions.map(sub => (
                       <tr key={sub._id} className={`hover:bg-slate-50 ${sub.isFlagged ? 'bg-yellow-50' : ''}`}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-800">{sub.problem?.name || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-800">
+                          <div>{sub.problem?.name || 'N/A'}</div>
+                          <div className="text-xs text-slate-500 font-mono">{sub.problem?._id}</div>
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">{sub.verdict}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{formatDate(sub.createdAt)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                          <Link to={`/submissions/${sub._id}`} className="text-indigo-600 hover:underline">View</Link>
-                          <button onClick={() => handleToggleFlag(sub._id)} className={`p-2 rounded-full ${sub.isFlagged ? 'bg-yellow-500 text-white' : 'bg-slate-200 text-slate-600'} hover:opacity-80`}>
-                            {sub.isFlagged ? <FaCheck /> : <FaFlag />}
-                          </button>
-                          <button onClick={() => handleDelete(sub._id)} className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600">
-                            <FaTrash />
-                          </button>
-                        </td>
+                        {!isViewOnly && (
+                          <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                            <Link to={`/submissions/${sub._id}`} className="text-indigo-600 hover:underline">View</Link>
+                            <button onClick={() => handleToggleFlag(sub._id)} className={`p-2 rounded-full ${sub.isFlagged ? 'bg-yellow-500 text-white' : 'bg-slate-200 text-slate-600'} hover:opacity-80`}>
+                              {sub.isFlagged ? <FaCheck /> : <FaFlag />}
+                            </button>
+                            <button onClick={() => handleDelete(sub._id)} className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600">
+                              <FaTrash />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { getAllUsers, deleteUser, toggleUserFlag } from '../api/adminApi';
 import { FaFlag, FaTrash, FaCheck } from 'react-icons/fa';
@@ -8,6 +9,8 @@ const AdminUserManagementPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const location = useLocation();
+  const isViewOnly = new URLSearchParams(location.search).get('view') === 'true';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -83,9 +86,11 @@ const AdminUserManagementPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Joined On
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {!isViewOnly && (
+                      <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
@@ -111,14 +116,16 @@ const AdminUserManagementPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         {formatDate(user.createdAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <button onClick={() => handleToggleFlag(user._id)} className={`p-2 rounded-full ${user.isFlagged ? 'bg-yellow-500 text-white' : 'bg-slate-200 text-slate-600'} hover:opacity-80`}>
-                          {user.isFlagged ? <FaCheck /> : <FaFlag />}
-                        </button>
-                        <button onClick={() => handleDeleteUser(user._id)} className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600">
-                          <FaTrash />
-                        </button>
-                      </td>
+                      {!isViewOnly && (
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                          <button onClick={() => handleToggleFlag(user._id)} className={`p-2 rounded-full ${user.isFlagged ? 'bg-yellow-500 text-white' : 'bg-slate-200 text-slate-600'} hover:opacity-80`}>
+                            {user.isFlagged ? <FaCheck /> : <FaFlag />}
+                          </button>
+                          <button onClick={() => handleDeleteUser(user._id)} className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600">
+                            <FaTrash />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

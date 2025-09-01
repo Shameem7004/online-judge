@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getAllProblems, deleteProblem } from '../api/problemApi';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -9,6 +9,8 @@ import { toast } from 'react-toastify';
 const AdminProblemManagementPage = () => {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const isViewOnly = new URLSearchParams(location.search).get('view') === 'true';
 
   useEffect(() => {
     const fetchProblems = async () => {
@@ -47,11 +49,13 @@ const AdminProblemManagementPage = () => {
             View, edit, or delete all coding problems.
           </p>
         </div>
-        <Link to="/admin/create-problem">
-          <Button>
-            <FaPlus className="mr-2" /> Create New Problem
-          </Button>
-        </Link>
+        {!isViewOnly && (
+          <Link to="/admin/create-problem">
+            <Button>
+              <FaPlus className="mr-2" /> Create New Problem
+            </Button>
+          </Link>
+        )}
       </div>
 
       <Card>
@@ -63,24 +67,31 @@ const AdminProblemManagementPage = () => {
                   <th className="p-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                   <th className="p-2 text-left text-xs font-medium text-gray-500 uppercase">Difficulty</th>
                   <th className="p-2 text-left text-xs font-medium text-gray-500 uppercase">Points</th>
-                  <th className="p-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  {!isViewOnly && (
+                    <th className="p-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {problems.map(problem => (
                   <tr key={problem._id} className="hover:bg-gray-50">
-                    <td className="p-2 whitespace-nowrap font-medium text-gray-800">{problem.name}</td>
+                    <td className="p-2 whitespace-nowrap font-medium text-gray-800">
+                      <div>{problem.name}</div>
+                      <div className="text-xs text-slate-500 font-mono">{problem._id}</div>
+                    </td>
                     <td className="p-2 whitespace-nowrap text-sm text-gray-500">{problem.difficulty}</td>
                     <td className="p-2 whitespace-nowrap text-sm text-gray-500">{problem.points}</td>
-                    <td className="p-2 whitespace-nowrap text-right text-sm font-medium flex gap-2">
-                      <Link to={`/admin/edit-problem/${problem._id}`}>
-                        <Button variant="outline" size="sm"><FaEdit /></Button>
-                      </Link>
-                      <Link to={`/admin/problems/${problem._id}/testcases`}>
-                        <Button size="sm" variant="primary">Manage Testcases</Button>
-                      </Link>
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(problem._id)}><FaTrash /></Button>
-                    </td>
+                    {!isViewOnly && (
+                      <td className="p-2 whitespace-nowrap text-right text-sm font-medium flex gap-2">
+                        <Link to={`/admin/edit-problem/${problem._id}`}>
+                          <Button variant="outline" size="sm"><FaEdit /></Button>
+                        </Link>
+                        <Link to={`/admin/problems/${problem._id}/testcases`}>
+                          <Button size="sm" variant="primary">Manage Testcases</Button>
+                        </Link>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(problem._id)}><FaTrash /></Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

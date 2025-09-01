@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaUsers, FaCode, FaTrophy, FaChartLine, FaListAlt } from 'react-icons/fa';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { getDashboardStats } from '../api/adminApi';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { FaUsers, FaCode, FaTrophy, FaChartLine, FaListAlt } from 'react-icons/fa';
 
 const StatsOverview = ({ stats, loading }) => {
   const statCards = [
-    { title: 'Total Users', value: stats.totalUsers, icon: FaUsers, color: 'text-blue-600', bgColor: 'bg-blue-100', link: '/admin/users' },
-    { title: 'Total Problems', value: stats.totalProblems, icon: FaCode, color: 'text-green-600', bgColor: 'bg-green-100', link: '/admin/problems' },
-    { title: 'Active Contests', value: stats.activeContests, icon: FaTrophy, color: 'text-purple-600', bgColor: 'bg-purple-100', link: '/admin/contests' },
-    { title: 'Total Submissions', value: stats.totalSubmissions, icon: FaChartLine, color: 'text-orange-600', bgColor: 'bg-orange-100', link: '/admin/submissions' }
+    { title: 'Total Users', value: stats.totalUsers, icon: FaUsers, color: 'text-blue-600', bgColor: 'bg-blue-100', link: '/admin/users?view=true' },
+    { title: 'Total Problems', value: stats.totalProblems, icon: FaCode, color: 'text-green-600', bgColor: 'bg-green-100', link: '/admin/problems?view=true' },
+    { title: 'Active Contests', value: stats.activeContests, icon: FaTrophy, color: 'text-purple-600', bgColor: 'bg-purple-100', link: '/admin/contests?view=true' },
+    { title: 'Total Submissions', value: stats.totalSubmissions, icon: FaChartLine, color: 'text-orange-600', bgColor: 'bg-orange-100', link: '/admin/submissions?view=true' }
   ];
 
   return (
@@ -36,13 +36,14 @@ const QuickActions = () => {
     { title: 'Manage Problems', description: 'Create, edit, and manage problems', icon: FaListAlt, color: 'bg-green-600 hover:bg-green-700', link: '/admin/problems' },
     { title: 'Manage Contests', description: 'Set up, monitor, and manage contests', icon: FaTrophy, color: 'bg-purple-600 hover:bg-purple-700', link: '/admin/contests' },
     { title: 'Manage Users', description: 'View and manage all platform users', icon: FaUsers, color: 'bg-blue-600 hover:bg-blue-700', link: '/admin/users' },
+    { title: 'Manage Submissions', description: 'Review and moderate all submissions', icon: FaChartLine, color: 'bg-orange-600 hover:bg-orange-700', link: '/admin/submissions' },
   ];
 
   return (
     <Card>
       <CardHeader><CardTitle>Management Actions</CardTitle></CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {actions.map((action, index) => (
             <Link key={index} to={action.link}>
               <div className={`${action.color} text-white p-6 rounded-lg text-center hover:shadow-lg transition-all duration-200 cursor-pointer h-full flex flex-col justify-center`}>
