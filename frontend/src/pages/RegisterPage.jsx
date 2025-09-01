@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from 'react-router-dom'; 
 import { registerUser } from "../api/userApi";
 import { useNotification } from '../context/NotificationContext'; // 1. Import the hook
+import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Import icons
 import '../index.css'; // Ensure styles are applied
 
 function RegisterPage() {
@@ -13,6 +14,7 @@ function RegisterPage() {
         username: '',
         password: '',
     });
+    const [showPassword, setShowPassword] = useState(false); // State for password visibility
     const navigate = useNavigate(); 
 
     const handleChange = (e) => {
@@ -45,7 +47,25 @@ function RegisterPage() {
                     </div>
                     <input name="email" type="email" placeholder="Email" value={formData.email} onChange={handleChange} required className="w-full px-4 py-2 text-gray-900 bg-gray-100 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                     <input name="username" type="text" placeholder="Username" value={formData.username} onChange={handleChange} required className="w-full px-4 py-2 text-gray-900 bg-gray-100 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                    <input name="password" type="password" placeholder="Password" value={formData.password} onChange={handleChange} required className="w-full px-4 py-2 text-gray-900 bg-gray-100 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <div className="relative">
+                        <input 
+                            name="password" 
+                            type={showPassword ? 'text' : 'password'} 
+                            placeholder="Password" 
+                            value={formData.password} 
+                            onChange={handleChange} 
+                            required 
+                            className="w-full px-4 py-2 text-gray-900 bg-gray-100 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10" 
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-600 hover:text-gray-800"
+                            aria-label="Toggle password visibility"
+                        >
+                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
+                    </div>
                     <button type="submit" className="w-full py-3 px-4 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Register
                     </button>

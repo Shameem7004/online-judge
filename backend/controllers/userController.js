@@ -8,22 +8,21 @@ const jwt = require('jsonwebtoken');
 // Resgisteration part
 const registerUser = async (req, res) => {
 
-    console.log("I m inside register controller in bacnkend")
     try{
         const { firstname, lastname, email, password, username } = req.body;
         if(!(firstname && lastname && email && password && username)) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: 'All fields are required' 
+                message: 'All fields are required'
             });
         }
 
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        const existingUser = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username }] });
         if(existingUser) {
-            return res.status(409).json({
-                success: false,
-                message: 'User already exists'
-            });
+           return res.status(409).json({
+               success: false,
+               message: 'User with this email or username already exists'
+           });
         }
        
        
@@ -58,8 +57,7 @@ const registerUser = async (req, res) => {
             lastname: user.lastname,
             email: user.email,
             username: user.username,
-            role: user.role, // <-- FIX: Add the role property
-            createdAt: user.createdAt
+            role: user.role,            createdAt: user.createdAt
         };
 
         return res.status(201).json({
@@ -72,25 +70,30 @@ const registerUser = async (req, res) => {
     } catch(error){
         console.error('Registration error:', error);
         
+        // FIX: Handle Mongoose validation errors to send specific messages
         if (error.name === 'ValidationError') {
-            const validationErrors = Object.values(error.errors).map(err => err.message);
+            // Extract the first error message for simplicity
+            const messages = Object.values(error.errors).map(val => val.message);
+            const errorMessage = messages[0] || 'Validation failed. Please check your input.';
             return res.status(400).json({
                 success: false,
-                message: "Validation failed",
-                errors: validationErrors
+                message: errorMessage
             });
         }
         
+        // FIX: Handle duplicate key errors (e.g., for unique username/email)
         if (error.code === 11000) {
-            return res.status(409).json({
+            const field = Object.keys(error.keyValue)[0];
+            return res.status(409).json({ // 409 Conflict is more appropriate
                 success: false,
-                message: "User with this email already exists"
+                message: `An account with that ${field} already exists.`
             });
         }
 
-        res.status(500).json({
+        // Generic server error
+        return res.status(500).json({
             success: false,
-            message: "Internal server error during registration"
+            message: 'Server error during registration.'
         });
     }
 };
