@@ -70,8 +70,10 @@ function Navbar() {
     { path: '/problems', label: 'Problems' },
     { path: '/contests', label: 'Contests' },
     { path: '/leaderboard', label: 'Leaderboard' },
-    // FIX: Conditionally add the Admin Panel link to the main navbar
+    // Conditionally add the Admin Panel link to the main navbar
     ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Admin Panel' }] : []),
+    // FIX: Conditionally add the Appeal Status link for flagged users
+    ...(user?.isFlagged ? [{ path: '/account-status', label: 'Appeal Status' }] : []),
   ];
 
   const userMenuItems = [
@@ -79,6 +81,8 @@ function Navbar() {
     { icon: FaCode, label: 'My Submissions', path: '/submissions' },
     // FIX: Remove the Admin Panel link from the dropdown menu
   ];
+
+  const blockedWhenFlagged = ['/problems','/contests','/leaderboard'];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm shadow-sm transition-colors">
@@ -92,19 +96,24 @@ function Navbar() {
               </span>
             </Link>
             <div className="hidden md:flex items-center space-x-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive(item.path)
-                      ? 'bg-indigo-50 text-indigo-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {navItems.map(item => {
+                const disabled = user?.isFlagged && blockedWhenFlagged.includes(item.path);
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => !disabled && navigate(item.path)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      disabled
+                        ? 'text-slate-400 cursor-not-allowed opacity-50'
+                        : isActive(item.path)
+                          ? 'text-indigo-600'
+                          : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

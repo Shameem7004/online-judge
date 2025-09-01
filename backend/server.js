@@ -14,6 +14,7 @@ const testCaseRoutes = require('./routes/testCaseRoutes.js');
 const aiRoutes = require('./routes/aiRoutes');
 const contestRoutes = require('./routes/contestRoutes');
 const adminRoutes = require('./routes/adminRoutes'); // Import admin routes
+const appealRoutes = require('./routes/appealRoutes.js'); // FIX: Import the new appeal routes
 
 // connection to database
 DBConnection();
@@ -74,6 +75,8 @@ app.use('/ai', aiRoutes); // FIX: Removed /v1
 app.use('/contests', contestRoutes); // FIX: Removed /v1
 // Admin route
 app.use('/admin', adminRoutes); // FIX: Removed /v1
+// FIX: Add the appeal routes to the application
+app.use('/appeals', appealRoutes);
 
 // test route
 app.get('/', (req, res) => {

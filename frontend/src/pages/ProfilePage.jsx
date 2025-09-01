@@ -252,9 +252,9 @@ const EditableProfileInfo = ({ user, onSave }) => {
             Profile Information
           </CardTitle>
           {!isEditing ? (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={user.isFlagged}>
               <FaEdit className="mr-2" />
-              Edit
+              Edit Profile
             </Button>
           ) : (
             <div className="flex space-x-2">
@@ -296,12 +296,24 @@ const EditableProfileInfo = ({ user, onSave }) => {
                   />
                 </div>
               ) : (
-                <>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {user.firstname && user.lastname ? `${user.firstname} ${user.lastname}` : user.username}
-                  </h2>
-                  <p className="text-gray-600">@{user.username}</p>
-                </>
+                <div className="flex items-center justify-between flex-1">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-bold text-gray-900">{user.firstname} {user.lastname}</h2>
+                      {/* FIX: Add the "Flagged" badge if the user is flagged */}
+                      {user.isFlagged && (
+                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
+                          Flagged
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-gray-600">{user.username}</p>
+                  </div>
+                  {/* FIX: Disable the edit button if the user is flagged */}
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={user.isFlagged}>
+                    Edit Profile
+                  </Button>
+                </div>
               )}
             </div>
           </div>

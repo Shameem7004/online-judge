@@ -32,6 +32,8 @@ import AdminProblemManagementPage from './pages/AdminProblemManagementPage';
 import TestcaseManagementPage from './pages/TestcaseManagementPage';
 import AdminUserManagementPage from './pages/AdminUserManagementPage'; // Import new page
 import AdminAllSubmissionsPage from './pages/AdminAllSubmissionsPage'; // Import new page
+import AccountStatusPage from './pages/AccountStatusPage'; // FIX: ensure import
+import FlaggedUserRoute from './components/FlaggedUserRoute'; // FIX: ensure import
 
 function App() {
   return (
@@ -51,43 +53,43 @@ function App() {
           theme="light"
         />
         <Routes>
+          {/* Public */}
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/problems" element={<AllProblemsPage />} />
-          <Route path="/problems/:slug" element={<ProblemDetailPage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/users/:username" element={<PublicProfilePage />} />
-          <Route path="/contests" element={<ContestsPage />} />
-          <Route path="/contests/:id" element={<ContestDetailPage />} />
-          <Route path="/contests/:contestId/leaderboard" element={<ContestLeaderboardPage />} />
-          <Route path="/notifications" element={<NotificationPage />} />
-          <Route path="/daily-problem" element={<DailyProblemPage />} />
+          <Route path="/account-status" element={<AccountStatusPage />} />
 
-          {/* Protected User Routes */}
+          {/* Always accessible to logged-in flagged or unflagged */}
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/submissions" element={<SubmissionsPage />} />
-          <Route path="/submissions/:id" element={<IndividualSubmissionPage />} />
-          <Route path='/profile' element={<ProfilePage />} />
 
-          {/* Protected Admin Route */}
-          <Route path="/admin" element={<AdminRoute />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="create-problem" element={<CreateProblemPage />} />
-            <Route path="edit-problem/:id" element={<EditProblemPage />} />
-            <Route path="contests" element={<AdminContestManagementPage />} />
-            <Route path="create-contest" element={<CreateContestPage />} />
-            <Route path="edit-contest/:id" element={<EditContestPage />} />
-            <Route path="problems" element={<AdminProblemManagementPage />} />
-            <Route path="problems/:problemId/testcases" element={<TestcaseManagementPage />} />
-            <Route path="users" element={<AdminUserManagementPage />} /> {/* Add new route */}
-            <Route path="submissions" element={<AdminAllSubmissionsPage />} /> {/* Add new route */}
-
-            {/* Additional Admin Routes */}
-            <Route path="contests" element={<AdminContestManagementPage />} />
-            <Route path="create-contest" element={<CreateContestPage />} />
-            <Route path="contests/:contestId/edit" element={<EditContestPage />} />
+          {/* Restricted (blocked for flagged users) */}
+          <Route element={<FlaggedUserRoute />}>
+            <Route path="/submissions/:id" element={<IndividualSubmissionPage />} />
+            <Route path="/problems" element={<AllProblemsPage />} />
+            <Route path="/problems/:slug" element={<ProblemDetailPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/contests" element={<ContestsPage />} />
+            <Route path="/contests/:id" element={<ContestDetailPage />} />
+            <Route path="/contests/:id/leaderboard" element={<ContestLeaderboardPage />} />
           </Route>
 
+          {/* Admin */}
+          <Route path="/admin" element={<AdminRoute />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUserManagementPage />} />
+            <Route path="problems" element={<AdminProblemManagementPage />} />
+            <Route path="problems/:problemId/testcases" element={<TestcaseManagementPage />} />
+            <Route path="contests" element={<AdminContestManagementPage />} />
+            <Route path="create-problem" element={<CreateProblemPage />} />
+            <Route path="edit-problem/:id" element={<EditProblemPage />} />
+            <Route path="create-contest" element={<CreateContestPage />} />
+            <Route path="edit-contest/:id" element={<EditContestPage />} />
+            <Route path="submissions" element={<AdminAllSubmissionsPage />} />
+            {/* <Route path="announcements" element={<AdminAnnouncementManagementPage />} /> */}
+            {/* Add appeals admin page later if implemented */}
+          </Route>
         </Routes>
       </main>
     </>

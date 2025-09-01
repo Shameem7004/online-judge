@@ -16,10 +16,12 @@ function LoginPage() {
 
   // 3. Add this useEffect hook
   useEffect(() => {
-    // This effect runs when the 'user' object changes.
-    // If the user is successfully set (i.e., not null), navigate to the homepage.
     if (user) {
-      navigate('/');
+      if (user.isFlagged) {
+        navigate('/account-status', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
   }, [user, navigate]); // Dependencies: user and navigate
 

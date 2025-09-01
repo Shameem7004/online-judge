@@ -15,6 +15,13 @@ const analyzeSubmission = async (req, res) => {
             return res.status(403).json({ success: false, message: 'You are not authorized to analyze this submission.' });
         }
 
+        if (req.user.isFlagged) {
+            return res.status(403).json({
+                success: false,
+                message: 'AI analysis is disabled for flagged accounts.'
+            });
+        }
+
         const analysis = await getCodeAnalysis(submission.problem, submission);
         
         return res.status(200).json({ success: true, analysis });

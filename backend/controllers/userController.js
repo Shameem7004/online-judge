@@ -5,6 +5,22 @@ const Submission = require('../models/Submission');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// A helper function to create a consistent user response object
+const createUserResponse = (user) => {
+    if (!user) return null;
+    return {
+        id: user._id,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        isFlagged: user.isFlagged, // FIX: Add isFlagged
+        flagReason: user.flagReason, // FIX: Add flagReason
+        createdAt: user.createdAt,
+    };
+};
+
 // Resgisteration part
 const registerUser = async (req, res) => {
 
@@ -39,32 +55,19 @@ const registerUser = async (req, res) => {
             username
         });
 
-        const token = jwt.sign(
-            {
-            id: user._id, 
-            email: user.email,
-            },
-            // CHANGE: Use the correct environment variable name from your .env file
-            process.env.JWT_SECRET_KEY,
-            {
-                expiresIn: '24h'
-            }
-        );
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '24h' });
 
-        const userResponse = {
-            id: user._id,
-            firstname: user.firstname,
-            lastname: user.lastname,
-            email: user.email,
-            username: user.username,
-            role: user.role,            createdAt: user.createdAt
-        };
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
 
         return res.status(201).json({
             success: true,
-            message: 'User registered successfully!',
-            user: userResponse,
-            token
+            message: 'User registered successfully',
+            user: createUserResponse(user) // FIX: Use the helper function
         });
 
     } catch(error){
@@ -101,77 +104,39 @@ const registerUser = async (req, res) => {
 // Login Part
 const loginUser = async (req, res) => {
     try{
-        const { email, password, username } = req.body;
-
+        const { email, username, password } = req.body;
         if(!((email || username) && password)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email/Username and password are required'
-            });
+            return res.status(400).json({ success: false, message: 'Email/Username and password are required' });
         }
 
-        const user = await User.findOne({ $or: [{ email: email?.toLowerCase() }, { username }] });
-
+        const user = await User.findOne({ $or: [{ email }, { username }] });
         if(!user) {
-            // FIX: Provide a specific error message for user not found.
-            return res.status(404).json({
-                success: false,
-                message: 'User not found. Please check your email or username.'
-            });
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
-
         if(!isMatch) {
-            // FIX: Provide a specific error message for an incorrect password.
-            return res.status(401).json({
-                success: false,
-                message: 'Incorrect password. Please try again.'
-            });
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
-        
-        const token = jwt.sign(
-            {
-            id: user._id, 
-            email: user.email,
-            role: user.role
-            },
-            process.env.JWT_SECRET_KEY,
-            {
-                expiresIn: '24h'
-            }
-        );
 
-        const userResponse = {
-            id: user._id,
-            firstname: user.firstname,
-            lastname: user.lastname,
-            email: user.email,
-            username: user.username,
-            role: user.role,
-            createdAt: user.createdAt
-        };
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '24h' });
 
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000
         });
 
         return res.status(200).json({
             success: true,
-            message: 'Logged in successfully!',
-            user: userResponse
-            // Note: Removed token from body as it's sent in a secure cookie
+            message: 'Logged in successfully',
+            user: createUserResponse(user) // FIX: Use the helper function
         });
 
     } catch(error){
         console.error('Login error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Server error during login.'
-        });
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 
@@ -192,35 +157,18 @@ const logoutUser = (req, res) => {
 // to get info of logged in user.
 const getCurrentUser = async (req, res) => {
     try{
-        // PREVIOUSLY: The logic was trying to read from req.body and was missing a check for req.user
-        // CHANGE: The auth middleware already attaches the user to `req.user`. We just need to use it.
-        // This is much simpler and more secure.
-
-        // The auth middleware has already found the user and attached it to req.user.
+        // The user object is already attached by the 'auth' middleware
         const user = req.user;
-
-        // We create a safe response object without the password.
-        const userResponse = {
-            id: user._id,
-            firstname: user.firstname,
-            lastname: user.lastname,
-            username: user.username,
-            email: user.email,
-            createdAt: user.createdAt,
-            role: user.role
-        };
-
-        res.status(200).json({
+        if(!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        return res.status(200).json({
             success: true,
-            user: userResponse
+            user: createUserResponse(user) // FIX: Use the helper function
         });
-
     } catch(error){
-        console.error("Error in fetching user's detail", error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error'
-        });
+        console.error('Get current user error:', error);
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 

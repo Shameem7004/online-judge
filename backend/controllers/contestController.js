@@ -136,6 +136,11 @@ exports.registerForContest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Already registered for this contest.' });
         }
 
+        // New check for flagged users
+        if (req.user.isFlagged) {
+            return res.status(403).json({ success: false, message: 'Flagged users cannot register for contests.' });
+        }
+
         contest.participants.push(req.user._id);
         await contest.save();
 

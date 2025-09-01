@@ -11,6 +11,12 @@ const initiateSubmission = async (req, res) => {
     if (!problemId || !language || !code) {
       return res.status(400).json({ success:false, message:'Missing fields' });
     }
+    if (req.user.isFlagged) {
+      return res.status(403).json({
+        success: false,
+        message: 'Flagged users cannot submit code.'
+      });
+    }
     const submission = await Submission.create({
       user: userId,
       problem: problemId,
