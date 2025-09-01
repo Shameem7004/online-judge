@@ -102,42 +102,45 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     try{
         const { email, password, username } = req.body;
-        
-        if(!password){
+
+        if(!((email || username) && password)) {
             return res.status(400).json({
                 success: false,
-                message: 'Password is required'
+                message: 'Email/Username and password are required'
             });
         }
-        
-        let user;
-        if(email){
-            user = await User.findOne({email: email.toLowerCase()});
-        } else if(username){
-            user = await User.findOne({ username: username.trim()});
-        } else {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide either email or username'
-            });
-        }
+
+        const user = await User.findOne({ $or: [{ email: email?.toLowerCase() }, { username }] });
 
         if(!user) {
-            return res.status(401).json({
+            // FIX: Provide a specific error message for user not found.
+            return res.status(404).json({
                 success: false,
-                message: 'Invalid credentials'
-            });
-        }
-        
-        const isMatch = await bcrypt.compare(password, user.password);
-        if(!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
+                message: 'User not found. Please check your email or username.'
             });
         }
 
-        const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET_KEY, { expiresIn: '24h' });
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if(!isMatch) {
+            // FIX: Provide a specific error message for an incorrect password.
+            return res.status(401).json({
+                success: false,
+                message: 'Incorrect password. Please try again.'
+            });
+        }
+        
+        const token = jwt.sign(
+            {
+            id: user._id, 
+            email: user.email,
+            role: user.role
+            },
+            process.env.JWT_SECRET_KEY,
+            {
+                expiresIn: '24h'
+            }
+        );
 
         const userResponse = {
             id: user._id,
@@ -145,7 +148,7 @@ const loginUser = async (req, res) => {
             lastname: user.lastname,
             email: user.email,
             username: user.username,
-            role: user.role, // <-- FIX: Add the role property
+            role: user.role,
             createdAt: user.createdAt
         };
 
@@ -154,17 +157,20 @@ const loginUser = async (req, res) => {
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }).status(200).json({
+        });
+
+        return res.status(200).json({
             success: true,
-            message: 'Logged in successfully',
+            message: 'Logged in successfully!',
             user: userResponse
+            // Note: Removed token from body as it's sent in a secure cookie
         });
 
     } catch(error){
-        console.error("Login error:", error);
+        console.error('Login error:', error);
         return res.status(500).json({
             success: false,
-            message: "Internal server error during login"
+            message: 'Server error during login.'
         });
     }
 };
