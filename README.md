@@ -1,4 +1,4 @@
-# CodeVerse Online Judge
+# CodeVersee Online Judge
 
 A full‑stack online judge platform supporting problem solving, contests, AI code review (Gemini), daily challenges, secure queued judging, and a multi‑language Dockerized compiler microservice.
 
